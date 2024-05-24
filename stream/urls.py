@@ -16,7 +16,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from webcam.views import index, video_feed_1  # camera_1, video_feed_2, camera_2
+from webcam.views import index, video_feed_1, get_traffic_light_control_response, post_traffic_light_control_status
 
 # from webcam.views import database, search
 
@@ -24,6 +24,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('index/', index),
     path('video_feed_1/', video_feed_1, name="video-feed-1"),
+    path('traffic_light/get', get_traffic_light_control_response, name="get_traffic_light_control_response"),
+    path('traffic_light/post', post_traffic_light_control_status, name="post_traffic_light_control_status"),
     # path('video_feed_2/', video_feed_2, name="video-feed-2"),
     # path('index/camera1/', camera_1),
     # path('index/camera2/', camera_2),
