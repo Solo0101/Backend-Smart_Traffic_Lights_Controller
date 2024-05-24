@@ -1,5 +1,5 @@
 /venv/
-/webcam/models
+/webcam/models/yolo
 /deep_sort
-currentframe.jpg
+./currentframe.jpg
 /stream/__pycache__
