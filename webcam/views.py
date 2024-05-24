@@ -1,7 +1,7 @@
 import json
 import os
-import time
 
+import torch
 from django.http import HttpResponse
 from django.template import loader
 from django.http.response import StreamingHttpResponse
@@ -156,7 +156,7 @@ def stream_1():
         print(trafficLightControlStatus)
         print(track_ids_list)
 
-        control_traffic_lights(vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4)
+        control_traffic_lights([vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4])
 
         annotated_frame = results[0].plot()
         print(len(vehicles_in_roi1), vehicles_in_roi1)
@@ -190,9 +190,14 @@ def roi_tracking(results, roi_list):
     vehicles_in_roi3 = []
     vehicles_in_roi4 = []
 
-    boxes = results[0].boxes.cuda().xywh
-    class_ids = results[0].boxes.cls.cuda().tolist()
-    track_ids = results[0].boxes.cuda().id
+    if torch.cuda.is_available():
+        boxes = results[0].boxes.cuda().xywh
+        class_ids = results[0].boxes.cls.cuda().tolist()
+        track_ids = results[0].boxes.cuda().id
+    else:
+        boxes = results[0].boxes.cpu().xywh
+        class_ids = results[0].boxes.cls.cpu().tolist()
+        track_ids = results[0].boxes.cpu().id
 
     if track_ids is not None:
         track_ids_list = track_ids.tolist()
