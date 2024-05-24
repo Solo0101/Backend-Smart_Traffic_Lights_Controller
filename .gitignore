@@ -1,0 +1,5 @@
+/venv/
+/webcam/models
+/deep_sort
+currentframe.jpg
+/stream/__pycache__
