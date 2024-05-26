@@ -7,6 +7,11 @@ import logging
 import time
 import base64
 
+from matplotlib import pyplot as plt
+from vidgear.gears import VideoGear
+
+from webcam import constants
+
 ALPHA = 0.5
 FONT = cv2.FONT_HERSHEY_PLAIN
 TEXT_SCALE = 1.0
@@ -33,6 +38,7 @@ folder_regex = re.compile('imgs/webcam|imgs/pi')
 
 def timeit(method):
     def timed(*args, **kw):
+        global logger
         ts = time.time()
         result = method(*args, **kw)
         te = time.time()
@@ -52,7 +58,7 @@ def img_to_base64(img):
 
 
 def draw_boxed_text(img, text, topleft, color):
-    """Draw a transluent boxed text in white, overlayed on top of a
+    """Draw a translucent boxed text in white, overlayed on top of a
     colored patch surrounded by a black border. FONT, TEXT_SCALE,
     TEXT_THICKNESS and ALPHA values are constants (fixed) as defined
     on top.
@@ -196,3 +202,81 @@ def gstreamer_pipeline(
                 display_height,
             )
     )
+
+
+def get_video_stream():
+    # For YouTube Streams/Videos:
+    if "https://www.youtube.com" in constants.VIDEO_SOURCE:
+        vid = VideoGear(
+            source=constants.VIDEO_SOURCE + " ! application/x-rtp,media=video,payload=96,"
+                                            "clock-rate=90000,encoding-name=H264, ! rtph264depay ! decodebin ! "
+                                            "videoconvert ! video/x-raw,"
+                                            "format=BGR ! appsink",
+            stream_mode=True,
+            resolution=(640, 480),
+            framerate=constants.FRAME_RATE,
+            logging=True,
+            time_delay=1
+        ).start()
+
+    # For Raspberry Pi Video Connection:
+    elif "raspberrypi" in constants.VIDEO_SOURCE:
+        vid = cv2.VideoCapture(constants.VIDEO_SOURCE)
+
+    # For local machine webcam:
+    elif constants.VIDEO_SOURCE == 0:
+        vid = VideoGear(source=constants.VIDEO_SOURCE).start()
+
+    # For locally saved video
+    else:
+        vid = VideoGear(
+            source=constants.VIDEO_SOURCE,
+            resolution=(640, 480),
+            framerate=constants.FRAME_RATE,
+            logging=True,
+            time_delay=1,
+        ).start()
+    return vid
+
+
+def get_frame(vid):
+    if "raspberrypi" in constants.VIDEO_SOURCE:
+        _, frame = vid.read()
+    else:
+        frame = vid.read()
+    return frame
+
+
+def check_wanted_classes(class_key):
+    if class_key not in constants.CUSTOM_CLASS_NAMES:
+        return False
+    return True
+
+
+def plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score, file_name):
+    analytic_list_waiting_score.sort(key=lambda x: x[1])
+    analytic_list_throughput_score.sort(key=lambda x: x[1])
+    plt.xlabel("traffic volume score")
+    plt.ylabel("waiting_score/throughput_score")
+    plt.plot(*zip(*analytic_list_waiting_score), label="waiting_score")
+    plt.plot(*zip(*analytic_list_throughput_score), label="throughput_score")
+    plt.savefig(file_name, bbox_inches='tight')
+    plt.show()
+
+
+def save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, analytic_list_waiting_score,
+                        analytic_list_throughput_score):
+    analytic_list_waiting_score.append((traffic_volume_score, waiting_score))
+    analytic_list_throughput_score.append((traffic_volume_score, throughput_score))
+
+    if len(analytic_list_waiting_score) == 500:
+        plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
+                       'webcam/images/analytics500frames.png')
+
+    if len(analytic_list_waiting_score) == 1500:
+        plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
+                       'webcam/images/analytics1500frames.png')
+
+    if len(analytic_list_waiting_score) == 3000:
+        plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
+                       'webcam/images/analytics3000frames.png')
