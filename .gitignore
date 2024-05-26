@@ -1,5 +1,3 @@
-#venv/
 webcam/models/yolo
 deep_sort
-currentframe.jpg
 stream/__pycache__
