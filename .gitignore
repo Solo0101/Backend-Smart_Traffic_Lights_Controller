@@ -1,4 +1,4 @@
-venv/
+#venv/
 webcam/models/yolo
 deep_sort
 currentframe.jpg
