@@ -8,13 +8,14 @@ from ultralytics import YOLO
 DETECTION_MODEL = 'yolo'
 
 with open(
-        os.path.join('webcam\\models',
+        os.path.join('webcam',
+                     'models',
                      DETECTION_MODEL,
                      'labels.json')
 ) as json_data:
     CLASS_NAMES = json.load(json_data)
 
-model = YOLO("webcam/models/yolo/yolov8n.pt")
+model = YOLO("webcam/models/yolo/yolo12x.pt")
 colors = np.random.uniform(0, 255, size=255)
 
 CUSTOM_CLASS_NAMES = {
@@ -47,8 +48,8 @@ ENABLE_VEHICLES_IN_ROIS_LOGGING = False
 VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
 # VIDEO_SOURCE = "tcp://raspberrypizero2w.local:8888"
 
-# VIDEO_SOURCE =  "https://www.youtube.com/watch?v=Vz4f8Gy6P1Q"
-# VIDEO_SOURCE =  "https://www.youtube.com/watch?v=sPe_XHhO5aw"
+# VIDEO_SOURCE = "https://www.youtube.com/watch?v=Vz4f8Gy6P1Q"
+# VIDEO_SOURCE = "https://www.youtube.com/watch?v=sPe_XHhO5aw"
 
 
 # rois for livestream
