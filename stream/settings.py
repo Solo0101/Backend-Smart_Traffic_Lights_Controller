@@ -39,8 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'webcam',
-    'rest_framework'
+    'rest_framework',
+    'webcam.apps.WebcamConfig'
 ]
 
 MIDDLEWARE = [
@@ -128,7 +128,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
-# TIME_ZONE = 'Asia/Seoul'
 
 USE_I18N = True
 
