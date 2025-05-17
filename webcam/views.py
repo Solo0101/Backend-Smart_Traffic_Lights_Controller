@@ -55,25 +55,16 @@ def generate_frames_for_stream():
     #          b'Content-Type: image/jpeg\r\n\r\n' + open('webcam/images/currentframe.jpg', 'rb').read() + b'\r\n')
 
     while True:
-
-        # Encode the frame for streaming
-        ret, buffer = cv2.imencode(ext='jpg', img='webcam/images/currentframe.jpg')
-        if ret:
-            with utils.frame_lock:
-                utils.latest_processed_frame_bytes = buffer.tobytes()
-        else:
-            print("Warning: Could not encode frame for streaming.")
-
         frame_bytes_to_send = None
         with utils.frame_lock:  # Use the lock imported from utils
             if utils.latest_processed_frame_bytes:  # Use the variable imported from utils
-                frame_bytes_to_send = utils.latest_processed_frame_bytes
+                frame_bytes_to_send = utils.latest_processed_frame_bytes[0]
                 # print("Stream: Acquired frame from latest_processed_frame_bytes.") # DEBUG
 
-        if frame_bytes_to_send:
+        if frame_bytes_to_send is not None:
             # print(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes_to_send + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + bytearray(frame_bytes_to_send) + b'\r\n')
 
         else:
             # print("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG

@@ -86,6 +86,10 @@ def background_processing_loop():
                 annotated_frame)
 
             # Display processed frame
+            with frame_lock:
+                _, annotated_frame_bytes = cv2.imencode(".jpg", annotated_frame)
+                latest_processed_frame_bytes.append(annotated_frame_bytes)
+                # latest_processed_frame_bytes.append(annotated_frame)
             cv2.imwrite('webcam/images/currentframe.jpg', annotated_frame)
 
 

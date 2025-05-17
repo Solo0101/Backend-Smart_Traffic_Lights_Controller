@@ -1,4 +1,5 @@
 """Utilities for logging."""
+import collections
 import os
 import re
 import threading
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 folder_regex = re.compile('imgs/webcam|imgs/pi')
 
-latest_processed_frame_bytes = None
+latest_processed_frame_bytes = collections.deque(maxlen=1)
 frame_lock = threading.Lock()
 
 
