@@ -1,6 +1,9 @@
 """Utilities for logging."""
+import collections
 import os
 import re
+import threading
+
 import cv2
 import numpy as np
 import logging
@@ -35,6 +38,9 @@ logger = logging.getLogger(__name__)
 
 folder_regex = re.compile('imgs/webcam|imgs/pi')
 
+latest_processed_frame_bytes = collections.deque(maxlen=1)
+frame_lock = threading.Lock()
+
 
 def timeit(method):
     def timed(*args, **kw):
@@ -67,7 +73,7 @@ def draw_boxed_text(img, text, topleft, color):
       img: the input image as a numpy array.
       text: the text to be drawn.
       topleft: XY coordinate of the topleft corner of the boxed text.
-      color: color of the patch, i.e. background of the text.
+      color: color of the patch, i.e., background of the text.
 
     # Output
       img: note the original image is modified inplace.
@@ -88,7 +94,7 @@ def draw_boxed_text(img, text, topleft, color):
     cv2.rectangle(patch, (0, 0), (w - 1, h - 1), BLACK, thickness=1)
     w = min(w, img_w - topleft[0])  # clip overlay at image boundary
     h = min(h, img_h - topleft[1])
-    # Overlay the boxed text onto region of interest (roi) in img
+    # Overlay the boxed text onto a region of interest (roi) in img
     roi = img[topleft[1]:topleft[1] + h, topleft[0]:topleft[0] + w, :]
     cv2.addWeighted(patch[0:h, 0:w, :], ALPHA, roi, 1 - ALPHA, 0, roi)
     return img

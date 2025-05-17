@@ -19,7 +19,7 @@ import tensorflow as tf
 from core.config import cfg
 
 def read_class_names(class_file_name):
-    '''loads class name from a file'''
+    """loads class name from a file"""
     names = {}
     with open(class_file_name, 'r') as data:
         for ID, name in enumerate(data):
@@ -27,7 +27,7 @@ def read_class_names(class_file_name):
     return names
 
 def get_anchors(anchors_path):
-    '''loads the anchors from a file'''
+    """loads the anchors from a file"""
     with open(anchors_path) as f:
         anchors = f.readline()
     anchors = np.array(anchors.split(','), dtype=np.float32)
@@ -48,7 +48,7 @@ def image_preporcess(image, target_size, gt_boxes=None):
     image_paded = np.full(shape=[ih, iw, 3], fill_value=128.0)
     dw, dh = (iw - nw) // 2, (ih-nh) // 2
     image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
-    image_paded = image_paded / 255.
+    image_paded /= 255.
 
     if gt_boxes is None:
         return image_paded
