@@ -10,3 +10,5 @@ djangorestframework~=3.15.2
 matplotlib~=3.8.4
 lapx~=0.5.11
 yt_dlp~=2025.3.31
+opencv-python-headless
+gunicorn

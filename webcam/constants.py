@@ -46,7 +46,7 @@ DISPLAY_ROIS = True
 ENABLE_VEHICLES_IN_ROIS_LOGGING = True
 
 VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
-# VIDEO_SOURCE = "https://www.youtube.com/watch?v=sPe_XHhO5aw"
+# VIDEO_SOURCE = "https://www.youtube.com/watch?v=NAk9Ku-n0Sk"
 # VIDEO_SOURCE = "tcp://raspberrypizero2w.local:8888"
 
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=Vz4f8Gy6P1Q"

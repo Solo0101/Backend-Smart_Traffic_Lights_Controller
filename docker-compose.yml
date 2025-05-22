@@ -1,0 +1,37 @@
+services:
+  nginx:
+    image: 'docker.io/jc21/nginx-proxy-manager:latest'
+    container_name: 'nginx-proxy-manager'
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ../nginx-proxy-manager/data:/data
+      - ../nginx-proxy-manager/letsencrypt:/etc/letsencrypt
+
+  django-yolo-streaming:
+      build:
+        dockerfile: Dockerfile
+      image: 'django-yolo-streaming:latest'
+      container_name: 'django-yolo-streaming'
+      restart: unless-stopped
+      ports:
+        - "8000:8000"
+      deploy:
+        resources:
+            reservations:
+              devices:
+                  - driver: nvidia
+                    device_ids: [ all ]
+                    capabilities: [ gpu, compute, utility ]
+
+  mongodb:
+      image: mongo:6-jammy
+      container_name: 'mongodb'
+      restart: unless-stopped
+      ports:
+          - '27017:27017'
+      volumes:
+          - ../mongodb/dbdata6:/data/db
