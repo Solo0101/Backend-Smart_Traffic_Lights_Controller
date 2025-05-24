@@ -66,10 +66,17 @@ RUN pip install --no-cache-dir -r pytorch_requirements.txt
 COPY . .
 
 # Expose the port your Django app runs on (e.g., 8000)
+#EXPOSE 8000 8001
 EXPOSE 8000
 
 # Command to run your application
 # For development (less secure, not for production):
  CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
 # For production (using Gunicorn or another WSGI server):
-#CMD ["gunicorn", "--bind", "0.0.0.0:8000", "your_project_name.wsgi:application"]
+#CMD ["gunicorn","–config=gunicorn_config.py","stream.wsgi:application"]
+#CMD ["gunicorn", "--bind", "0.0.0.0:8000", "stream.wsgi:application"]
+
+# For production (using Daphne or another ASGI server):
+#CMD ["daphne", "-b", "0.0.0.0", "-p", "8001", "stream.asgi:application"]
+#CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "stream.asgi:application"]

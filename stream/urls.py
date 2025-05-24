@@ -16,6 +16,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
+
+from stream import consumers
 from webcam.views import index, video_feed, get_traffic_light_control_response, post_traffic_light_control_status
 
 urlpatterns = [
@@ -24,4 +26,5 @@ urlpatterns = [
     path('video_feed/', video_feed, name="video-feed-1"),
     path('traffic_light/get', get_traffic_light_control_response, name="get_traffic_light_control_response"),
     path('traffic_light/post', post_traffic_light_control_status, name="post_traffic_light_control_status"),
+    path('ws/pi_comms', consumers.PiConsumer.as_asgi(), name="ws-pi-comms"),
 ]
