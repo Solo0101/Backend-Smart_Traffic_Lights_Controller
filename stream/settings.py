@@ -33,6 +33,7 @@ SITE_URL = "http://0.0.0.0:8000"
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,7 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'channels',
     'webcam.apps.WebcamConfig'
+
 ]
 
 MIDDLEWARE = [
@@ -73,6 +76,18 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'stream.wsgi.application'
+ASGI_APPLICATION = 'stream.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            # "hosts": [("localhost", 6379)], # Or your Redis server details
+            # For Docker, this might be 'redis' as the hostname: [('redis', 6379)]
+            "hosts": [("redis", 6379)]
+        },
+    },
+}
 
 
 # Database
@@ -127,7 +142,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Bucharest'
 
 USE_I18N = True
 

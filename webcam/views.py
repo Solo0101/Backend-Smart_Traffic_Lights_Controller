@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 from django.http import HttpResponse
@@ -45,12 +46,12 @@ def post_traffic_light_control_status(request):
 # DISPLAY CAMERA  ------------------
 
 # MODIFIED DISPLAY CAMERA  ------------------
-def generate_frames_for_stream():
+async def generate_frames_for_stream():
     """
     Generator function to yield the latest processed frame.
     """
     # while True:
-    #     with frame_lock:
+    #     with utils.frame_lock:
     #         yield (b'--frame\r\n'
     #          b'Content-Type: image/jpeg\r\n\r\n' + open('webcam/images/currentframe.jpg', 'rb').read() + b'\r\n')
 
@@ -59,17 +60,21 @@ def generate_frames_for_stream():
         with utils.frame_lock:  # Use the lock imported from utils
             if utils.latest_processed_frame_bytes:  # Use the variable imported from utils
                 frame_bytes_to_send = utils.latest_processed_frame_bytes[0]
+                utils.latest_processed_frame_bytes.pop()  # Remove the processed frame from the list
                 # print("Stream: Acquired frame from latest_processed_frame_bytes.") # DEBUG
 
         if frame_bytes_to_send is not None:
-            # print(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + bytearray(frame_bytes_to_send) + b'\r\n')
+            print(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
 
         else:
-            # print("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG
+            print("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG
             pass  # Avoid printing too much if no frame is ready immediately
-        time.sleep(1.0 / 20)  # Adjust FPS as needed (e.g., 20 FPS)
+
+        await asyncio.sleep(1.0/20)  # Adjust FPS as needed (e.g., 20 FPS) for ASGI
+        # time.sleep(1.0 / 20)  # Adjust FPS as needed (e.g., 20 FPS)
+        # time.sleep(2)  # Adjust FPS as needed (e.g., 20 FPS)
 
 
 
