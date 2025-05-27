@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+from webcam.utils import ThreadNameFilter
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -160,3 +161,79 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'thread_name': {
+            '()': ThreadNameFilter,
+        }
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {threadName} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'main_thread_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'main_thread.log', # Log file for main thread
+            'formatter': 'verbose',
+            'filters': ['thread_name'], # Apply filter
+        },
+        'background_thread_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'background_thread.log', # Log file for background thread
+            'formatter': 'verbose',
+            'filters': ['thread_name'], # Apply filter
+        },
+        'console_main': { # For viewing the main thread in one console
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'filters': ['thread_name'],
+            'stream': 'ext://sys.stdout', # Default output
+        },
+        'console_background': { # For viewing background thread in another console (conceptually)
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'filters': ['thread_name'],
+            # This is tricky for direct terminal separation from within one Python process
+            # We'll handle terminal separation externally.
+        }
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['main_thread_file'], # Django's default logs
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'app_main_thread_logger': { # Logger for your main thread code
+            'handlers': ['main_thread_file', 'console_main'],
+            'level': 'DEBUG',
+            'propagate': False,
+            'filters': ['thread_name'], # Ensure filter is applied
+        },
+        'app_background_thread_logger': { # Logger for your background thread code
+            'handlers': ['background_thread_file', 'console_background'],
+            'level': 'DEBUG',
+            'propagate': False,
+            'filters': ['thread_name'], # Ensure filter is applied
+        },
+    },
+    # This root logger will catch anything not explicitly handled,
+    # but we want to ensure our thread-specific loggers are used.
+    'root': {
+        'handlers': ['main_thread_file'], # Default to the main thread log
+        'level': 'WARNING',
+    },
+}

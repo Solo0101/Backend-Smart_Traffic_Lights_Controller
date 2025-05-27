@@ -41,6 +41,13 @@ folder_regex = re.compile('imgs/webcam|imgs/pi')
 latest_processed_frame_bytes = collections.deque(maxlen=1)
 frame_lock = threading.Lock()
 
+logger_main = logging.getLogger('app_main_thread_logger')
+logger_background = logging.getLogger('app_background_thread_logger')
+
+class ThreadNameFilter(logging.Filter):
+    def filter(self, record):
+        record.threadName = threading.current_thread().name
+        return True
 
 def timeit(method):
     def timed(*args, **kw):
@@ -76,7 +83,7 @@ def draw_boxed_text(img, text, topleft, color):
       color: color of the patch, i.e., background of the text.
 
     # Output
-      img: note the original image is modified inplace.
+      img: note the original image is modified in place.
     """
     assert img.dtype == np.uint8
     img_h, img_w, _ = img.shape

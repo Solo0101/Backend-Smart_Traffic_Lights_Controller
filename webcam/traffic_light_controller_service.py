@@ -1,6 +1,7 @@
 import cv2
 
 from webcam import api_variables, constants
+from webcam.utils import logger_background
 
 
 def get_waiting_score(roi_list, waiting_score):
@@ -27,7 +28,7 @@ def control_traffic_lights(roi_list, waiting_score, real_frame_number, frame_num
             traffic_volume_score = throughput_score / waiting_score
             if traffic_volume_score < constants.TRAFFIC_TOGGLE_THRESHOLD and real_frame_number % 150 == 0: #TODO Refactor with constant to put a name for total time in which it can not toggle after another toggle
                 toggle_traffic_lights()
-                print("TRAFFIC LIGHTS TOGGLED! \n")
+                logger_background.debug("TRAFFIC LIGHTS TOGGLED! \n")
                 frame_number = 0
                 throughput_score = 0
                 waiting_score = 0
@@ -36,8 +37,7 @@ def control_traffic_lights(roi_list, waiting_score, real_frame_number, frame_num
         else:
             traffic_volume_score = 100
 
-    print('throughput_score:', throughput_score, '; waiting_score:', waiting_score, ';')
-    print('traffic_volume_score: ', traffic_volume_score)
+    logger_background.debug('throughput_score: %s; waiting_score: %s; \ntraffic_volume_score: %s', str(throughput_score), str(waiting_score), str(traffic_volume_score))
 
     return roi_list, waiting_score, throughput_score, traffic_volume_score, frame_number
 
@@ -51,11 +51,12 @@ def toggle_traffic_lights():
 
 def debugging_print_vehicles_in_rois(roi_list):
     if constants.ENABLE_VEHICLES_IN_ROIS_LOGGING:
-        print(len(roi_list[0]), roi_list[0]) # vehicles_in_roi1
-        print(len(roi_list[1]), roi_list[1]) # vehicles_in_roi1
-        print(len(roi_list[2]), roi_list[2]) # vehicles_in_roi3
-        print(len(roi_list[3]), roi_list[3]) # vehicles_in_roi4
-        print(len(roi_list[4]), roi_list[4]) # vehicles_in_intersection
+        debug_string = ("\n" + str(len(roi_list[0])) + " " + str(roi_list[0]) +
+                        "\n" + str(len(roi_list[1])) + " " + str(roi_list[1]) +
+                        "\n" + str(len(roi_list[2])) + " " + str(roi_list[2]) +
+                        "\n" + str(len(roi_list[3])) + " " + str(roi_list[3]) +
+                        "\n" + str(len(roi_list[4])) + " " + str(roi_list[4]) + "\n")
+        logger_background.debug(debug_string)
 
 def draw_debugging_dot_to_calculated_tracked_car(roi_list, annotated_frame):
     for i in range(len(roi_list)):

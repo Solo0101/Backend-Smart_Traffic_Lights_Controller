@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 import time
@@ -10,7 +11,8 @@ from webcam import constants
 from webcam.traffic_light_controller_service import control_traffic_lights, debugging_print_vehicles_in_rois, draw_debugging_dot_to_calculated_tracked_car
 from webcam.constants import model
 from webcam.yolo_roi_tracker import roi_tracking, draw_rois
-from webcam.utils import check_wanted_classes, save_plot_analytics, get_video_stream, get_frame, frame_lock, latest_processed_frame_bytes
+from webcam.utils import check_wanted_classes, save_plot_analytics, get_video_stream, get_frame, frame_lock, \
+    latest_processed_frame_bytes, logger_main, logger_background
 
 
 def background_processing_loop():
@@ -42,15 +44,17 @@ def background_processing_loop():
 
             # Acquiring the frame from the video stream and resizing it
             frame = get_frame(vid)
+            if frame is None:
+                continue
             frame = cv2.resize(frame, (1000, 700))
             real_frame_number += 1
-            print('Frame:', real_frame_number)
+            logger_background.debug('Frame: %s', str(real_frame_number))
 
             # Get the result from the image object tracking
             results = model.track(frame, persist=True, classes=custom_class_ids, conf=0.1, iou=0.1,
                                   tracker="webcam/models/yolo/bytetrack.yaml")
 
-            # Process the obtained results
+            # The Process got results
             (vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection,
              track_ids_list) = roi_tracking(
                 results,
@@ -95,7 +99,7 @@ def background_processing_loop():
 
 
         except Exception as e:
-            print(f"Error in background_processing_loop: {e}")
+            logger_background.debug(f"Error in background_processing_loop: {e}")
             import traceback
             traceback.print_exc()
             time.sleep(5)  # Wait before retrying after an error
@@ -108,7 +112,9 @@ class WebcamConfig(AppConfig):
         # This check prevents the thread from starting multiple times during development
         # when the reloader is active.
         if os.environ.get('RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN'):
-            print("Starting background image processing thread...")
-            processing_thread = threading.Thread(target=background_processing_loop, daemon=True)
+            main_thread = threading.current_thread()
+            main_thread.name = str("MainThread")
+            logger_main.debug("Starting background image processing thread...")
+            processing_thread = threading.Thread(target=background_processing_loop, daemon=True, name="BackgroundThread")
             processing_thread.start()
-            print("Background image processing thread started.")
+            logger_main.debug("Background image processing thread started.")
