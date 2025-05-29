@@ -62,12 +62,16 @@ def background_processing_loop():
                  roi2,
                  roi3,
                  roi4,
-                 roi_central], vehicles_in_intersection)
+                 roi_central])
 
+            # Hardcoded traffic controller
             [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4,
              vehicles_in_intersection], waiting_score, throughput_score, traffic_volume_score, frame_number = control_traffic_lights(
                 [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
                 waiting_score, real_frame_number, frame_number)
+
+            # Smart traffic controller
+            # TODO: Implement method
 
             # Display resulted an object tracking bounding boxes
             annotated_frame = results[0].plot()
