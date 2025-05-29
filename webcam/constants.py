@@ -15,6 +15,7 @@ with open(
 ) as json_data:
     CLASS_NAMES = json.load(json_data)
 
+# model = YOLO("webcam/models/yolo/rtdetrv2_r101vd_6x_coco_from_paddle.pth")
 model = YOLO("webcam/models/yolo/yolo12x.pt")
 colors = np.random.uniform(0, 255, size=255)
 
