@@ -8,16 +8,34 @@ from django.apps import AppConfig
 import cv2
 
 from webcam import constants
-from webcam.traffic_light_controller_service import control_traffic_lights, debugging_print_vehicles_in_rois, draw_debugging_dot_to_calculated_tracked_car
-from webcam.constants import model
+from webcam.dqn_per import DQNPERAgent
+from webcam.traffic_light_controller_service import control_traffic_lights, debugging_print_vehicles_in_rois, \
+    draw_debugging_dot_to_calculated_tracked_car, smart_control_traffic_lights
+from webcam.websocket_connection_manager import pi_connection_manager
 from webcam.yolo_roi_tracker import roi_tracking, draw_rois
 from webcam.utils import check_wanted_classes, save_plot_analytics, get_video_stream, get_frame, frame_lock, \
-    latest_processed_frame_bytes, logger_main, logger_background
-
+    latest_processed_frame_bytes, logger_main, logger_background, load_models, debug_info_gpu_utilization
 
 def background_processing_loop():
+    debug_info_gpu_utilization()
 
     custom_class_ids = []
+
+    state_dim = 20
+    action_dim = 3
+    hidden_dim = 128
+
+    traffic_control_agent = DQNPERAgent(state_dim, action_dim, hidden_dim)
+
+    try:
+        detection_model, traffic_control_agent = load_models(traffic_control_agent)
+    except Exception as e:
+        logger_background.debug(f"Error in background_processing_loop: {e}")
+        import traceback
+        traceback.print_exc()
+        return
+
+    traffic_control_agent.model.eval()
 
     for k in constants.CUSTOM_CLASS_NAMES:
         if check_wanted_classes(k):
@@ -30,7 +48,6 @@ def background_processing_loop():
     roi4 = constants.ROI4
     roi_central = constants.ROI_CENTRAL
 
-    vehicles_in_intersection = []
     frame_number = 0
     real_frame_number = 0
     analytic_list_waiting_score = []
@@ -38,20 +55,22 @@ def background_processing_loop():
 
     vid = get_video_stream()
 
+    last_smart_control_time = time.monotonic()  # Initialize with current time
     while True:
+        current_loop_time = time.monotonic()
         try:
             waiting_score = 0
 
             # Acquiring the frame from the video stream and resizing it
             frame = get_frame(vid)
-            if frame is None:
+            if frame is None or pi_connection_manager.is_connected() is False:
                 continue
             frame = cv2.resize(frame, (1000, 700))
             real_frame_number += 1
             logger_background.debug('Frame: %s', str(real_frame_number))
 
             # Get the result from the image object tracking
-            results = model.track(frame, persist=True, classes=custom_class_ids, conf=0.1, iou=0.1,
+            results = detection_model.track(frame, persist=True, classes=custom_class_ids, conf=0.1, iou=0.1,
                                   tracker="webcam/models/yolo/bytetrack.yaml")
 
             # The Process got results
@@ -71,7 +90,9 @@ def background_processing_loop():
                 waiting_score, real_frame_number, frame_number)
 
             # Smart traffic controller
-            # TODO: Implement method
+            # Execute every 1 second
+            last_smart_control_time = smart_control_traffic_lights(traffic_control_agent, [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
+                waiting_score, current_loop_time, last_smart_control_time)
 
             # Display resulted an object tracking bounding boxes
             annotated_frame = results[0].plot()

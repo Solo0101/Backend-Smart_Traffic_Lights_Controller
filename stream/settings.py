@@ -83,9 +83,9 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            # "hosts": [("localhost", 6379)], # Or your Redis server details
+            "hosts": [("localhost", 6379)], # Or your Redis server details
             # For Docker, this might be 'redis' as the hostname: [('redis', 6379)]
-            "hosts": [("redis", 6379)]
+            # "hosts": [("redis", 6379)]
         },
     },
 }

@@ -3,9 +3,13 @@ import json
 import os
 
 import numpy as np
-from ultralytics import YOLO
 
+INTERSECTION_CONTROLLER_MODEL = 'smart-intersection-inference'
+CONTROLLER_MODEL_FILE = 'square_J0_-22810.pth'
 DETECTION_MODEL = 'yolo'
+DETECTION_MODEL_FILE = 'yolo12x.pt'
+
+PI_COMMUNICATION_GROUP = "pi_comms_group"
 
 with open(
         os.path.join('webcam',
@@ -15,8 +19,16 @@ with open(
 ) as json_data:
     CLASS_NAMES = json.load(json_data)
 
-# model = YOLO("webcam/models/yolo/rtdetrv2_r101vd_6x_coco_from_paddle.pth")
-model = YOLO("webcam/models/yolo/yolo12x.pt")
+detection_model_path = os.path.join('webcam',
+                                    'models',
+                                    DETECTION_MODEL,
+                                    DETECTION_MODEL_FILE)
+
+traffic_control_model_path = os.path.join('webcam',
+                                          'models',
+                                          INTERSECTION_CONTROLLER_MODEL,
+                                          CONTROLLER_MODEL_FILE)
+
 colors = np.random.uniform(0, 255, size=255)
 
 CUSTOM_CLASS_NAMES = {
@@ -35,6 +47,13 @@ WAITING_SCORE_PENALTY = {
     'motorcycle': 1,
     'bus': 5,
     'truck': 5
+}
+
+CURRENT_STATE_DICT = {
+    "NORTH_SOUTH_GREEN": 0,
+    "NORTH_SOUTH_YELLOW": 1,
+    "EAST_WEST_GREEN": 2,
+    "EAST_WEST_YELLOW": 3
 }
 
 FRAME_RATE = 15
@@ -72,8 +91,8 @@ ROI4 = [(590, 560), (840, 530), (1000, 625), (1000, 700), (740, 700)]
 ROI_CENTRAL = [(240, 410), (630, 370), (810, 490), (310, 570)]
 
 # rois for Raspberry Pi stream
-# ROI1 = [(220, 700), (130, 590), (345, 435), (450, 540)]
-# ROI2 = [(180, 195), (245, 165), (370, 250), (275, 300)]
-# ROI3 = [(700, 100), (750, 130), (680, 175), (625, 140)]
-# ROI4 = [(930, 420), (950, 370), (800, 265), (765, 310)]
+# ROI1 = [(220, 700), (130, 590), (345, 435), (450, 540)]  # West
+# ROI2 = [(180, 195), (245, 165), (370, 250), (275, 300)]  # North
+# ROI3 = [(700, 100), (750, 130), (680, 175), (625, 140)]  # East
+# ROI4 = [(930, 420), (950, 370), (800, 265), (765, 310)]  # South
 # ROI_CENTRAL = [(490, 475), (320, 330), (600, 160), (750, 240)]
