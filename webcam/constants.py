@@ -65,18 +65,22 @@ ENABLE_ANALYTICS_PLOTTING = False
 DISPLAY_ROIS = True
 ENABLE_VEHICLES_IN_ROIS_LOGGING = True
 
-VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
+SMART_CONTROL_INTERVAL = 1.0 # 1 second
+
+# VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=NAk9Ku-n0Sk"
 
 
 # libcamera-vid --mode 1920:1080:12:P --codec h264 --awb indoor --contrast 1.5 --saturation 1.5  -b 1000000 --autofocus-mode continuous  --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 # libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5  -b 1000000 --autofocus-mode continuous  --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 
-# libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5 -b 5000000 --flush 1 --sharpness 1.5 --denoise cdn_hq  --autofocus-mode continuous --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
+# libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5 -b 5000000 --flush 1 --sharpness 1.5 --denoise cdn_hq --autofocus-mode continuous --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 
 # VIDEO_SOURCE = "tcp://raspberrypizero2w.local:8888"
-# VIDEO_SOURCE = "tcp://proxy50.rt3.io:38231"
 # VIDEO_SOURCE = "tcp://raspberrypizero2w-tcp.at.remote.it:8888"
+# VIDEO_SOURCE = "tcp://eu1.pitunnel.net:60605"
+VIDEO_SOURCE = "tcp://127.0.0.1:8888"
+# VIDEO_SOURCE = "tcp://192.168.1.9:8888"
 
 
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=Vz4f8Gy6P1Q"
@@ -84,15 +88,15 @@ VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
 
 
 # rois for livestream
-ROI1 = [(0, 490), (190, 470), (240, 560), (0, 600)]
-ROI2 = [(240, 395), (160, 210), (265, 200), (460, 370)]
-ROI3 = [(680, 370), (1000, 340), (1000, 400), (790, 425)]
-ROI4 = [(590, 560), (840, 530), (1000, 625), (1000, 700), (740, 700)]
-ROI_CENTRAL = [(240, 410), (630, 370), (810, 490), (310, 570)]
+# ROI1 = [(0, 490), (190, 470), (240, 560), (0, 600)]
+# ROI2 = [(240, 395), (160, 210), (265, 200), (460, 370)]
+# ROI3 = [(680, 370), (1000, 340), (1000, 400), (790, 425)]
+# ROI4 = [(590, 560), (840, 530), (1000, 625), (1000, 700), (740, 700)]
+# ROI_CENTRAL = [(240, 410), (630, 370), (810, 490), (310, 570)]
 
 # rois for Raspberry Pi stream
-# ROI1 = [(220, 700), (130, 590), (345, 435), (450, 540)]  # West
-# ROI2 = [(180, 195), (245, 165), (370, 250), (275, 300)]  # North
-# ROI3 = [(700, 100), (750, 130), (680, 175), (625, 140)]  # East
-# ROI4 = [(930, 420), (950, 370), (800, 265), (765, 310)]  # South
-# ROI_CENTRAL = [(490, 475), (320, 330), (600, 160), (750, 240)]
+ROI1 = [(220, 700), (130, 590), (345, 435), (450, 540)]  # West
+ROI2 = [(180, 195), (245, 165), (370, 250), (275, 300)]  # North
+ROI3 = [(700, 100), (750, 130), (680, 175), (625, 140)]  # East
+ROI4 = [(930, 420), (950, 370), (800, 265), (765, 310)]  # South
+ROI_CENTRAL = [(490, 475), (320, 330), (600, 160), (750, 240)]

@@ -235,7 +235,7 @@ def get_video_stream():
         ).start()
 
     # For Raspberry Pi Video Connection:
-    elif "raspberrypi" in constants.VIDEO_SOURCE or "proxy" in constants.VIDEO_SOURCE:
+    elif "tcp" in constants.VIDEO_SOURCE:
         vid = cv2.VideoCapture(constants.VIDEO_SOURCE)
 
     # For local machine webcam:
@@ -255,7 +255,7 @@ def get_video_stream():
 
 
 def get_frame(vid):
-    if "raspberrypi" in constants.VIDEO_SOURCE:
+    if "tcp" in constants.VIDEO_SOURCE:
         _, frame = vid.read()
     else:
         frame = vid.read()

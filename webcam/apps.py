@@ -1,4 +1,3 @@
-import logging
 import os
 import threading
 import time
@@ -9,8 +8,7 @@ import cv2
 
 from webcam import constants
 from webcam.dqn_per import DQNPERAgent
-from webcam.traffic_light_controller_service import control_traffic_lights, debugging_print_vehicles_in_rois, \
-    draw_debugging_dot_to_calculated_tracked_car, smart_control_traffic_lights
+from webcam.traffic_light_controller_service import debugging_print_vehicles_in_rois, draw_debugging_dot_to_calculated_tracked_car, smart_control_traffic_lights
 from webcam.websocket_connection_manager import pi_connection_manager
 from webcam.yolo_roi_tracker import roi_tracking, draw_rois
 from webcam.utils import check_wanted_classes, save_plot_analytics, get_video_stream, get_frame, frame_lock, \
@@ -50,30 +48,39 @@ def background_processing_loop():
 
     frame_number = 0
     real_frame_number = 0
+    waiting_score = 0
+    waiting_list = [0, 0, 0, 0, 0, 0, 0, 0]
     analytic_list_waiting_score = []
     analytic_list_throughput_score = []
 
     vid = get_video_stream()
 
     last_smart_control_time = time.monotonic()  # Initialize with current time
+    old_in_intersection_list = []
+    current_state = pi_connection_manager.get_pi_request_data()["STATE"]
+
     while True:
         current_loop_time = time.monotonic()
         try:
-            waiting_score = 0
-
             # Acquiring the frame from the video stream and resizing it
             frame = get_frame(vid)
             if frame is None or pi_connection_manager.is_connected() is False:
+                time.sleep(5.0)
+                real_frame_number = 0
+                waiting_score = 0
+                vid = get_video_stream()
                 continue
             frame = cv2.resize(frame, (1000, 700))
             real_frame_number += 1
             logger_background.debug('Frame: %s', str(real_frame_number))
 
             # Get the result from the image object tracking
+
             results = detection_model.track(frame, persist=True, classes=custom_class_ids, conf=0.1, iou=0.1,
-                                  tracker="webcam/models/yolo/bytetrack.yaml")
+                                            tracker="webcam/models/yolo/bytetrack.yaml")
 
             # The Process got results
+
             (vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection,
              track_ids_list) = roi_tracking(
                 results,
@@ -83,16 +90,12 @@ def background_processing_loop():
                  roi4,
                  roi_central])
 
-            # Hardcoded traffic controller
-            [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4,
-             vehicles_in_intersection], waiting_score, throughput_score, traffic_volume_score, frame_number = control_traffic_lights(
-                [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
-                waiting_score, real_frame_number, frame_number)
-
             # Smart traffic controller
             # Execute every 1 second
-            last_smart_control_time = smart_control_traffic_lights(traffic_control_agent, [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
-                waiting_score, current_loop_time, last_smart_control_time)
+            last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list = smart_control_traffic_lights(traffic_control_agent,
+                                                                                                            [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
+                                                                                                            old_in_intersection_list, current_state,
+                                                                                                            waiting_score, current_loop_time, last_smart_control_time, waiting_list)
 
             # Display resulted an object tracking bounding boxes
             annotated_frame = results[0].plot()
@@ -102,9 +105,9 @@ def background_processing_loop():
                 [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection])
 
             # Display auxiliary information
-            if constants.ENABLE_ANALYTICS_PLOTTING:
-                save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, analytic_list_waiting_score,
-                                    analytic_list_throughput_score)
+            # if constants.ENABLE_ANALYTICS_PLOTTING:
+            #     save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, analytic_list_waiting_score,
+            #                         analytic_list_throughput_score)
 
             if constants.DISPLAY_ROIS:
                 annotated_frame = draw_rois(annotated_frame, roi1, roi2, roi3, roi4, roi_central)
@@ -120,8 +123,6 @@ def background_processing_loop():
                 latest_processed_frame_bytes.append(annotated_frame_bytes)
                 # latest_processed_frame_bytes.append(annotated_frame)
             cv2.imwrite('webcam/images/currentframe.jpg', annotated_frame)
-
-
 
         except Exception as e:
             logger_background.debug(f"Error in background_processing_loop: {e}")

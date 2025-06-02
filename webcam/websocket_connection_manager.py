@@ -26,7 +26,7 @@ class PiConnectionStatusManager:
     def __init__(self):
         self._is_connected = False
         self._pi_request_data = {
-            "STATE": "", "NSG": 0, "NSY": 0, "EWG": 0, "EWY": 0
+             "STATE": "NORTH_SOUTH_GREEN", "NSG": 42, "NSY": 3, "EWG": 42, "EWY": 3
         }
         self._lock = threading.Lock()
         self.logger = utils.logger_background
@@ -77,7 +77,7 @@ class PiConnectionStatusManager:
 
     def _reset_pi_request_data_internal(self):
         self._pi_request_data = {
-            "STATE": "", "NSG": 0, "NSY": 0, "EWG": 0, "EWY": 0
+            "STATE": "NORTH_SOUTH_GREEN", "NSG": 42, "NSY": 3, "EWG": 42, "EWY": 3
         }
 
 

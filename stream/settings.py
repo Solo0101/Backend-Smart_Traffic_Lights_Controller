@@ -26,7 +26,7 @@ SECRET_KEY = 'os*hqvscy)s#9m!u0kcr-^_$)8@upg94&-bi9oso*=rrvx6$&x'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*', '0.0.0.0', '192.168.11.232', '127.0.0.1', '192.168.1.9', '86.121.91.161', '46.97.168.7', 'smart-intersection.go.ro']
+ALLOWED_HOSTS = ['*', '0.0.0.0', '192.168.11.232', '127.0.0.1', '192.168.1.9', '86.121.91.161', '46.97.168.7', 'smart-intersection.go.ro', 'raspberrypizero2w-tcp.at.remote.it']
 # ALLOWED_HOSTS = ['0.0.0.0']
 
 SITE_URL = "http://0.0.0.0:8000"
@@ -83,9 +83,9 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("localhost", 6379)], # Or your Redis server details
-            # For Docker, this might be 'redis' as the hostname: [('redis', 6379)]
-            # "hosts": [("redis", 6379)]
+            # "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("127.0.0.1", 6380)],
+            # "hosts": [("redis", 6380)],
         },
     },
 }
