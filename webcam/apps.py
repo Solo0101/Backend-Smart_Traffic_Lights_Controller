@@ -56,6 +56,7 @@ def background_processing_loop():
     vid = get_video_stream()
 
     last_smart_control_time = time.monotonic()  # Initialize with current time
+    last_smart_edge_cases_control_time = time.monotonic()  # Initialize with current time
     old_in_intersection_list = []
     current_state = pi_connection_manager.get_pi_request_data()["STATE"]
 
@@ -92,10 +93,10 @@ def background_processing_loop():
 
             # Smart traffic controller
             # Execute every 1 second
-            last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list = smart_control_traffic_lights(traffic_control_agent,
+            last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list = smart_control_traffic_lights(traffic_control_agent,
                                                                                                             [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
                                                                                                             old_in_intersection_list, current_state,
-                                                                                                            waiting_score, current_loop_time, last_smart_control_time, waiting_list)
+                                                                                                            waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list)
 
             # Display resulted an object tracking bounding boxes
             annotated_frame = results[0].plot()
