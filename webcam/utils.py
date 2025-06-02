@@ -10,7 +10,9 @@ import logging
 import time
 import base64
 
+import torch
 from matplotlib import pyplot as plt
+from ultralytics import YOLO
 from vidgear.gears import VideoGear
 
 from webcam import constants
@@ -41,6 +43,13 @@ folder_regex = re.compile('imgs/webcam|imgs/pi')
 latest_processed_frame_bytes = collections.deque(maxlen=1)
 frame_lock = threading.Lock()
 
+logger_main = logging.getLogger('app_main_thread_logger')
+logger_background = logging.getLogger('app_background_thread_logger')
+
+class ThreadNameFilter(logging.Filter):
+    def filter(self, record):
+        record.threadName = threading.current_thread().name
+        return True
 
 def timeit(method):
     def timed(*args, **kw):
@@ -76,7 +85,7 @@ def draw_boxed_text(img, text, topleft, color):
       color: color of the patch, i.e., background of the text.
 
     # Output
-      img: note the original image is modified inplace.
+      img: note the original image is modified in place.
     """
     assert img.dtype == np.uint8
     img_h, img_w, _ = img.shape
@@ -226,7 +235,7 @@ def get_video_stream():
         ).start()
 
     # For Raspberry Pi Video Connection:
-    elif "raspberrypi" in constants.VIDEO_SOURCE or "proxy" in constants.VIDEO_SOURCE:
+    elif "tcp" in constants.VIDEO_SOURCE:
         vid = cv2.VideoCapture(constants.VIDEO_SOURCE)
 
     # For local machine webcam:
@@ -246,7 +255,7 @@ def get_video_stream():
 
 
 def get_frame(vid):
-    if "raspberrypi" in constants.VIDEO_SOURCE:
+    if "tcp" in constants.VIDEO_SOURCE:
         _, frame = vid.read()
     else:
         frame = vid.read()
@@ -269,6 +278,21 @@ def plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score, 
     plt.savefig(file_name, bbox_inches='tight')
     plt.show()
 
+def debug_info_gpu_utilization():
+    # --- Enhanced Early CUDA Diagnostics ---
+    logger_background.info("--- Background Thread: Early CUDA Diagnostics START ---")
+
+    # 1. Log PyTorch version
+    logger_background.info(f"PyTorch version: {torch.__version__}")
+
+    # 2. Log CUDA_VISIBLE_DEVICES
+    cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES')
+    logger_background.info(
+        f"CUDA_VISIBLE_DEVICES in background thread: {cuda_visible_devices if cuda_visible_devices is not None else 'Not Set'}")
+
+    # 3. Perform basic CUDA availability check and operations
+    is_cuda_available_early = torch.cuda.is_available()
+    logger_background.info(f"torch.cuda.is_available() at thread start: {is_cuda_available_early}")
 
 def save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, analytic_list_waiting_score,
                         analytic_list_throughput_score):
@@ -286,3 +310,21 @@ def save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, a
     if len(analytic_list_waiting_score) == 3000:
         plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
                        'webcam/images/analytics3000frames.png')
+
+def load_models(traffic_control_agent):
+    if os.path.exists(constants.detection_model_path):
+        detection_model = YOLO(constants.detection_model_path)
+    else:
+        error_msg = (f"Detection model path is invalid! "
+                     f"{constants.detection_model_path} doesn't exist! Exiting...")
+        logger_background.error(error_msg)
+        raise FileNotFoundError(error_msg)
+
+    if os.path.exists(constants.traffic_control_model_path):
+        traffic_control_agent.model.load_state_dict(torch.load(constants.traffic_control_model_path, map_location=traffic_control_agent.device))
+    else:
+        error_msg = (f"Traffic control model path is invalid! "
+                     f"{constants.traffic_control_model_path} doesn't exist! Exiting...")
+        logger_background.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    return detection_model, traffic_control_agent

@@ -8,16 +8,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
-from webcam.utils import latest_processed_frame_bytes, frame_lock
-
-import cv2
-
-from webcam import constants, utils
-from webcam.traffic_light_controller_service import control_traffic_lights, debugging_print_vehicles_in_rois, draw_debugging_dot_to_calculated_tracked_car
-from webcam.constants import model
-from webcam.yolo_roi_tracker import roi_tracking, draw_rois
-from webcam.utils import check_wanted_classes, save_plot_analytics, get_video_stream, get_frame
+from webcam import utils
 import webcam.api_variables
+from webcam.utils import logger_background
 
 
 # HOME PAGE -------------------------
@@ -50,13 +43,13 @@ async def generate_frames_for_stream():
     """
     Generator function to yield the latest processed frame.
     """
-    # while True:
-    #     with utils.frame_lock:
-    #         yield (b'--frame\r\n'
-    #          b'Content-Type: image/jpeg\r\n\r\n' + open('webcam/images/currentframe.jpg', 'rb').read() + b'\r\n')
+
+    printed_yielding_message = False
+    printed_no_frame_message = False
 
     while True:
         frame_bytes_to_send = None
+
         with utils.frame_lock:  # Use the lock imported from utils
             if utils.latest_processed_frame_bytes:  # Use the variable imported from utils
                 frame_bytes_to_send = utils.latest_processed_frame_bytes[0]
@@ -66,15 +59,20 @@ async def generate_frames_for_stream():
         if frame_bytes_to_send is not None:
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + bytearray(frame_bytes_to_send) + b'\r\n')
-            print(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
+            if not printed_yielding_message:
+                logger_background.debug(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
+                printed_yielding_message = True
+            printed_no_frame_message = False
 
         else:
-            print("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG
+            if not printed_no_frame_message:
+                logger_background.debug("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG
+                printed_no_frame_message = True
+            printed_yielding_message = False
             pass  # Avoid printing too much if no frame is ready immediately
 
         await asyncio.sleep(1.0/20)  # Adjust FPS as needed (e.g., 20 FPS) for ASGI
         # time.sleep(1.0 / 20)  # Adjust FPS as needed (e.g., 20 FPS)
-        # time.sleep(2)  # Adjust FPS as needed (e.g., 20 FPS)
 
 
 

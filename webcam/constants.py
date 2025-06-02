@@ -3,9 +3,13 @@ import json
 import os
 
 import numpy as np
-from ultralytics import YOLO
 
+INTERSECTION_CONTROLLER_MODEL = 'smart-intersection-inference'
+CONTROLLER_MODEL_FILE = 'square_J0_-22810.pth'
 DETECTION_MODEL = 'yolo'
+DETECTION_MODEL_FILE = 'yolo12x.pt'
+
+PI_COMMUNICATION_GROUP = "pi_comms_group"
 
 with open(
         os.path.join('webcam',
@@ -15,7 +19,16 @@ with open(
 ) as json_data:
     CLASS_NAMES = json.load(json_data)
 
-model = YOLO("webcam/models/yolo/yolo12x.pt")
+detection_model_path = os.path.join('webcam',
+                                    'models',
+                                    DETECTION_MODEL,
+                                    DETECTION_MODEL_FILE)
+
+traffic_control_model_path = os.path.join('webcam',
+                                          'models',
+                                          INTERSECTION_CONTROLLER_MODEL,
+                                          CONTROLLER_MODEL_FILE)
+
 colors = np.random.uniform(0, 255, size=255)
 
 CUSTOM_CLASS_NAMES = {
@@ -36,6 +49,13 @@ WAITING_SCORE_PENALTY = {
     'truck': 5
 }
 
+CURRENT_STATE_DICT = {
+    "NORTH_SOUTH_GREEN": 0,
+    "NORTH_SOUTH_YELLOW": 1,
+    "EAST_WEST_GREEN": 2,
+    "EAST_WEST_YELLOW": 3
+}
+
 FRAME_RATE = 15
 
 TRAFFIC_TOGGLE_THRESHOLD = 10
@@ -45,6 +65,8 @@ ENABLE_ANALYTICS_PLOTTING = False
 DISPLAY_ROIS = True
 ENABLE_VEHICLES_IN_ROIS_LOGGING = True
 
+SMART_CONTROL_INTERVAL = 1.0 # 1 second
+
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=NAk9Ku-n0Sk"
 
@@ -52,11 +74,13 @@ ENABLE_VEHICLES_IN_ROIS_LOGGING = True
 # libcamera-vid --mode 1920:1080:12:P --codec h264 --awb indoor --contrast 1.5 --saturation 1.5  -b 1000000 --autofocus-mode continuous  --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 # libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5  -b 1000000 --autofocus-mode continuous  --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 
-# libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5 -b 5000000 --flush 1 --sharpness 1.5 --denoise cdn_hq  --autofocus-mode continuous --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
+# libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5 -b 5000000 --flush 1 --sharpness 1.5 --denoise cdn_hq --autofocus-mode continuous --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 
 # VIDEO_SOURCE = "tcp://raspberrypizero2w.local:8888"
-# VIDEO_SOURCE = "tcp://proxy50.rt3.io:38231"
-VIDEO_SOURCE = "tcp://raspberrypizero2w-tcp.at.remote.it:8888"
+# VIDEO_SOURCE = "tcp://raspberrypizero2w-tcp.at.remote.it:8888"
+# VIDEO_SOURCE = "tcp://eu1.pitunnel.net:60605"
+VIDEO_SOURCE = "tcp://127.0.0.1:8888"
+# VIDEO_SOURCE = "tcp://192.168.1.9:8888"
 
 
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=Vz4f8Gy6P1Q"
@@ -71,9 +95,8 @@ VIDEO_SOURCE = "tcp://raspberrypizero2w-tcp.at.remote.it:8888"
 # ROI_CENTRAL = [(240, 410), (630, 370), (810, 490), (310, 570)]
 
 # rois for Raspberry Pi stream
-# TODO: Get the values for this
-roi1 = [(220, 700), (130, 590), (345, 435), (450, 540)]
-roi2 = [(180, 195), (245, 165), (370, 250), (275, 300)]
-roi3 = [(700, 100), (750, 130), (680, 175), (625, 140)]
-roi4 = [(930, 420), (950, 370), (800, 265), (765, 310)]
-roi_central = [(490, 475), (320, 330), (600, 160), (750, 240)]
+ROI1 = [(220, 700), (130, 590), (345, 435), (450, 540)]  # West
+ROI2 = [(180, 195), (245, 165), (370, 250), (275, 300)]  # North
+ROI3 = [(700, 100), (750, 130), (680, 175), (625, 140)]  # East
+ROI4 = [(930, 420), (950, 370), (800, 265), (765, 310)]  # South
+ROI_CENTRAL = [(490, 475), (320, 330), (600, 160), (750, 240)]
