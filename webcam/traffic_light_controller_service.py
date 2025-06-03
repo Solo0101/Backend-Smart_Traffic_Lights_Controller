@@ -3,7 +3,7 @@ import time
 import cv2
 import numpy as np
 
-from webcam import api_variables, constants
+from webcam import constants
 from webcam.constants import CURRENT_STATE_DICT
 from webcam.utils import logger_background
 from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager

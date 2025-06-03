@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 from django.http import HttpResponse
 from django.template import loader
@@ -9,8 +8,9 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
 from webcam import utils
-import webcam.api_variables
+from webcam.traffic_light_controller_service import toggle_traffic_lights
 from webcam.utils import logger_background
+from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager
 
 
 # HOME PAGE -------------------------
@@ -21,17 +21,59 @@ def index(request):
 # -----------------------------------
 
 # REST API ENDPOINTS
-
-# GET REQUEST -------------------------
+#TODO: Create more response options and codes if needed
+# GET REQUESTS -------------------------
 @api_view(['GET'])
-def get_traffic_light_control_response(request):
-    return Response(data=webcam.api_variables.trafficLightControlResponseList, status=status.HTTP_200_OK)
+def get_statistics(request):
+    #TODO: Implement
+    pass
 
+def get_current_intersection_status(request):
+    current_pi_update = pi_connection_manager.get_pi_request_data()
+    return Response(current_pi_update.to_json(), status=status.HTTP_200_OK)
 
-# POST REQUEST -------------------------
+# POST REQUESTS -------------------------
 @api_view(['POST'])
-def post_traffic_light_control_status(request):
-    webcam.api_variables.trafficLightControlStatus = request.data['trafficLightControlStatus']
+def post_traffic_light_toggle(request):
+    current_pi_update = pi_connection_manager.get_pi_request_data()
+    toggle_traffic_lights(current_pi_update["STATE"])
+    return Response(status=status.HTTP_202_ACCEPTED)
+
+@api_view(['POST'])
+def post_traffic_light_all_red(request):
+    send_pi_request(message_payload={
+        "action": "AllRed",
+        "direction": ""
+    })
+    return Response(status=status.HTTP_202_ACCEPTED)
+
+@api_view(['POST'])
+def post_traffic_light_hazard_mode(request):
+    send_pi_request(message_payload={
+        "action": "HazardMode",
+        "direction": ""
+    })
+    return Response(status=status.HTTP_202_ACCEPTED)
+
+@api_view(['POST'])
+def post_traffic_lights_off(request):
+    send_pi_request(message_payload={
+        "action": "AllOff",
+        "direction": ""
+    })
+    return Response(status=status.HTTP_202_ACCEPTED)
+
+@api_view(['POST'])
+def post_traffic_light_resume(request):
+    send_pi_request(message_payload={
+        "action": "Resume",
+        "direction": ""
+    })
+    return Response(status=status.HTTP_202_ACCEPTED)
+
+@api_view(['POST'])
+def post_traffic_light_toggle_smart_algorithm(request):
+    #TODO: Implement
     return Response(status=status.HTTP_202_ACCEPTED)
 
 # -----------------------------------
@@ -54,7 +96,7 @@ async def generate_frames_for_stream():
             if utils.latest_processed_frame_bytes:  # Use the variable imported from utils
                 frame_bytes_to_send = utils.latest_processed_frame_bytes[0]
                 utils.latest_processed_frame_bytes.pop()  # Remove the processed frame from the list
-                # print("Stream: Acquired frame from latest_processed_frame_bytes.") # DEBUG
+                print("Stream: Acquired frame from background processing thread.") # DEBUG
 
         if frame_bytes_to_send is not None:
             yield (b'--frame\r\n'
