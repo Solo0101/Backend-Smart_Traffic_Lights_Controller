@@ -66,6 +66,7 @@ DISPLAY_ROIS = True
 ENABLE_VEHICLES_IN_ROIS_LOGGING = True
 
 SMART_CONTROL_INTERVAL = 1.0 # 1 second
+EDGE_CASES_OPTIMIZATIONS_COOLDOWN = 15.0 # 15 seconds
 
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=NAk9Ku-n0Sk"

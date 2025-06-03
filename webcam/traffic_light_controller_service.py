@@ -1,7 +1,9 @@
+import time
+
 import cv2
 import numpy as np
 
-from webcam import api_variables, constants
+from webcam import constants
 from webcam.constants import CURRENT_STATE_DICT
 from webcam.utils import logger_background
 from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager
@@ -32,19 +34,19 @@ def get_waiting(roi_list, current_state, waiting_list):
     waiting_score=0
     if current_state == "NORTH_SOUTH_GREEN" or current_state == "NORTH_SOUTH_YELLOW":
         for i in range(0, len(roi_list)-1, 2):
-            waiting_list.append(-(len(roi_list[i]) // -2))
-            waiting_list.append(len(roi_list[i]) / 2)
-            waiting_list.append(0)
-            waiting_list.append(0)
+            waiting_list[i * 2] = -(len(roi_list[i]) // -2)
+            waiting_list[i * 2 + 1] = len(roi_list[i]) / 2
+            waiting_list[i * 2 + 2] = 0
+            waiting_list[i * 2 + 3] = 0
             for vehicle in roi_list[i]:
                 waiting_score += constants.WAITING_SCORE_PENALTY[vehicle[0]]
 
     elif current_state == "EAST_WEST_GREEN" or current_state == "EAST_WEST_YELLOW":
         for i in range(1, len(roi_list)-1, 2):
-            waiting_list.append(0)
-            waiting_list.append(0)
-            waiting_list.append(-(len(roi_list[i]) // -2))
-            waiting_list.append(len(roi_list[i]) / 2)
+            waiting_list[(i - 1) * 2] = 0
+            waiting_list[(i - 1) * 2 + 1] = 0
+            waiting_list[(i - 1) * 2 + 2] = -(len(roi_list[i]) // -2)
+            waiting_list[(i - 1) * 2 + 2] = len(roi_list[i]) / 2
             for vehicle in roi_list[i]:
                 waiting_score += constants.WAITING_SCORE_PENALTY[vehicle[0]]
     return waiting_score, waiting_list
@@ -53,13 +55,55 @@ def get_waiting(roi_list, current_state, waiting_list):
 def get_throughput_score(vehicles_in_intersection, frame_number):
     return (float(len(vehicles_in_intersection)) * constants.FRAME_RATE) / float(frame_number)
 
-def edge_case_optimizations_controller():
-    pass
+def toggle_traffic_lights(current_state):
+    if current_state == "NORTH_SOUTH_GREEN":
+        direction="NS"
+    elif current_state == "EAST_WEST_GREEN":
+        direction="EW"
+    else: return
 
-def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, waiting_score, current_loop_time, last_smart_control_time, waiting_list):
+    send_pi_request(message_payload={
+        "action": "Jump",
+        "direction": f"{direction}Y"
+    })
+
+def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_edge_cases_control_time):
+
+    if (current_loop_time - last_smart_edge_cases_control_time) <= constants.EDGE_CASES_OPTIMIZATIONS_COOLDOWN: # Execute every 15 seconds
+        return last_smart_edge_cases_control_time
+
+    current_pi_update = pi_connection_manager.get_pi_request_data()
+    waiting_score, _ = get_waiting(roi_list, current_pi_update["STATE"], [0, 0, 0, 0, 0, 0, 0, 0])
+
+    if "YELLOW" in current_pi_update["STATE"]:
+        return last_smart_edge_cases_control_time
+
+    empty_rois = 0
+
+    for roi in roi_list:
+        if len(roi) == 0:
+            empty_rois += 1
+
+    if empty_rois < 2:
+        return last_smart_edge_cases_control_time
+
+    potential_traffic_throughput_score = 0
+
+    for i in range(int(current_pi_update["STATE"] == "NORTH_SOUTH_GREEN"), len(roi_list)-1, 2):
+        for vehicle in roi_list[i]:
+            potential_traffic_throughput_score += constants.WAITING_SCORE_PENALTY[vehicle[0]]
+
+    if potential_traffic_throughput_score < waiting_score:
+        toggle_traffic_lights(current_pi_update["STATE"])
+        time.sleep(1.1)
+        last_smart_edge_cases_control_time = current_loop_time
+
+    return last_smart_edge_cases_control_time
+
+def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list):
     if (current_loop_time - last_smart_control_time) >= constants.SMART_CONTROL_INTERVAL: # Execute every 1 second
 
-        edge_case_optimizations_controller()
+        last_smart_edge_cases_control_time = edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_edge_cases_control_time) # If action taken has a cooldown of 15 seconds
 
         current_pi_update = pi_connection_manager.get_pi_request_data()
         waiting_score, waiting_list = get_waiting(roi_list, current_pi_update["STATE"], waiting_list)
@@ -96,7 +140,8 @@ def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_interse
 
         action_direction = get_action_direction(current_pi_update)
 
-        if current_state !=current_pi_update["STATE"] and current_state in ["NORTH_SOUTH_GREEN", "EAST_WEST_GREEN"]:
+        if current_state != current_pi_update["STATE"] and current_state in ["NORTH_SOUTH_GREEN", "EAST_WEST_GREEN"]:
+            last_smart_edge_cases_control_time = current_loop_time
             match action:
                 case 0:
                     send_pi_request(message_payload={
@@ -120,15 +165,7 @@ def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_interse
         last_smart_control_time = current_loop_time
         current_state = current_pi_update["STATE"]
 
-    return last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list
-
-
-def toggle_traffic_lights():
-    api_variables.trafficLightControlResponseList[0] = not api_variables.trafficLightControlResponseList[0]
-    api_variables.trafficLightControlResponseList[1] = not api_variables.trafficLightControlResponseList[1]
-    api_variables.trafficLightControlResponseList[2] = not api_variables.trafficLightControlResponseList[2]
-    api_variables.trafficLightControlResponseList[3] = not api_variables.trafficLightControlResponseList[3]
-    api_variables.trafficLightControlStatus = 1
+    return last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list
 
 def debugging_print_vehicles_in_rois(roi_list):
     if constants.ENABLE_VEHICLES_IN_ROIS_LOGGING:
