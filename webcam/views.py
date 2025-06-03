@@ -20,9 +20,11 @@ def index(request):
 
 # -----------------------------------
 
-# REST API ENDPOINTS
+#? REST API ENDPOINTS
+#TODO: Create api_manager class to handle statistics and smart algorithm toggle endpoint + Intersection class for housekeeping purposes
 #TODO: Create more response options and codes if needed
-# GET REQUESTS -------------------------
+
+#! GET REQUESTS -------------------------
 @api_view(['GET'])
 def get_statistics(request):
     #TODO: Implement
@@ -32,7 +34,7 @@ def get_current_intersection_status(request):
     current_pi_update = pi_connection_manager.get_pi_request_data()
     return Response(current_pi_update.to_json(), status=status.HTTP_200_OK)
 
-# POST REQUESTS -------------------------
+#! POST REQUESTS -------------------------
 @api_view(['POST'])
 def post_traffic_light_toggle(request):
     current_pi_update = pi_connection_manager.get_pi_request_data()

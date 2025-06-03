@@ -42,6 +42,8 @@ class PiConsumer(AsyncWebsocketConsumer):
                 else:
                     utils.logger_main.warning(f"Received WebSocket message payload is not a dict: {text_data_json}")
 
+                #TODO: Parse json response from Raspberry Pi and load it into the api_manager
+
                 await self.send(text_data=json.dumps({
                     "info": "DEBUG",
                     "message": f"Server received: {text_data_json}"  # Echo back the payload
