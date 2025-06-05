@@ -21,7 +21,10 @@ WORKDIR /app
 
 # Install Python, pip, and common dependencies
 # (Some NVIDIA images might already have Python. Adjust as needed.)
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin \
+    libgdal-dev \
     software-properties-common \
     ca-certificates \
     build-essential \
@@ -71,7 +74,7 @@ EXPOSE 8000
 
 # Command to run your application
 # For development (less secure, not for production):
- CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # For production (using Gunicorn or another WSGI server):
 #CMD ["gunicorn","–config=gunicorn_config.py","stream.wsgi:application"]

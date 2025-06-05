@@ -21,7 +21,7 @@ def index(request):
 # -----------------------------------
 
 #? REST API ENDPOINTS
-#TODO: Create api_manager class to handle statistics and smart algorithm toggle endpoint + Intersection class for housekeeping purposes
+#TODO: Create Intersection class to handle statistics and smart algorithm toggle endpoint +  for housekeeping purposes
 #TODO: Create more response options and codes if needed
 
 #! GET REQUESTS -------------------------
@@ -75,7 +75,7 @@ def post_traffic_light_resume(request):
 
 @api_view(['POST'])
 def post_traffic_light_toggle_smart_algorithm(request):
-    #TODO: Implement
+    # intersectionManager.toggle_smart_intersection_algorithm()
     return Response(status=status.HTTP_202_ACCEPTED)
 
 # -----------------------------------

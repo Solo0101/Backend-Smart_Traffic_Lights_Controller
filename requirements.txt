@@ -13,6 +13,8 @@ yt_dlp~=2025.3.31
 channels~=4.2.0
 channels-redis~=4.2.0
 asgiref~=3.8.1
+psycopg
+geojson
 opencv-python-headless
 gunicorn
 daphne

@@ -1,17 +1,19 @@
 import os
 import threading
 import time
+from decimal import Decimal
 
 from django.apps import AppConfig
 
 import cv2
+from geojson import Point
 
 from webcam import constants
 from webcam.dqn_per import DQNPERAgent
 from webcam.traffic_light_controller_service import debugging_print_vehicles_in_rois, draw_debugging_dot_to_calculated_tracked_car, smart_control_traffic_lights
 from webcam.websocket_connection_manager import pi_connection_manager
 from webcam.yolo_roi_tracker import roi_tracking, draw_rois
-from webcam.utils import check_wanted_classes, save_plot_analytics, get_video_stream, get_frame, frame_lock, \
+from webcam.utils import check_wanted_classes, get_video_stream, get_frame, frame_lock, \
     latest_processed_frame_bytes, logger_main, logger_background, load_models, debug_info_gpu_utilization
 
 def background_processing_loop():
@@ -60,6 +62,48 @@ def background_processing_loop():
     old_in_intersection_list = []
     current_state = pi_connection_manager.get_pi_request_data()["STATE"]
 
+    from webcam.models import IntersectionModel
+    intersection = IntersectionModel.objects.create(
+        id=constants.INTERSECTION_ID,
+        name="Intersectia Sagului",
+        address="Arta Textila/Calea Sagului",
+        country="Romania",
+        city="Timisoara",
+        coordXY= Point((Decimal(45.7326), Decimal(21.2087))),
+        entriesNumber=4,
+        entriesCoordinates={
+            "entrieNumber0": {
+                "0": Point((Decimal(45.73345133391029), Decimal(21.208923482493322))),
+                "1": Point((Decimal(45.732778809752986), Decimal(21.208661338471636))),
+            },
+            "entrieNumber1": {
+                "0": Point((Decimal(45.73258010646519), Decimal(21.21033038494067))),
+                "1": Point((Decimal(45.732627351713), Decimal(21.20895365734474)))
+            },
+            "entrieNumber2": {
+                "0": Point((Decimal(45.73175472315487), Decimal(21.208392593701202))),
+                "1": Point((Decimal(45.732389742401345), Decimal(21.20871980224627)))
+            },
+            "entrieNumber3": {
+                "0": Point((Decimal(45.732751019386946), Decimal(21.20690553930478))),
+                "1": Point((Decimal(45.73256621257191), Decimal(21.20838127813192)))
+            }
+        },
+        entriesTrafficScore=
+        {
+            "entrieNumber0": 25,
+            "entrieNumber1": 60,
+            "entrieNumber2": 17,
+            "entrieNumber3": 90
+        },
+        individualToggle=False,
+        is_smart_algorithm_enabled=True
+    )
+
+    intersection.save()
+
+
+
     while True:
         current_loop_time = time.monotonic()
         try:
@@ -93,6 +137,7 @@ def background_processing_loop():
 
             # Smart traffic controller
             # Execute every 1 second
+            # if intersectionManager.is_smart_intersection_algorithm_enabled():
             last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list = smart_control_traffic_lights(traffic_control_agent,
                                                                                                             [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
                                                                                                             old_in_intersection_list, current_state,
@@ -141,6 +186,9 @@ class WebcamConfig(AppConfig):
         if os.environ.get('RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN'):
             main_thread = threading.current_thread()
             main_thread.name = str("MainThread")
+            from webcam.models import IntersectionModel
+            intersection2 = IntersectionModel.objects.get(id=constants.INTERSECTION_ID)
+            print(intersection2.name)
             logger_main.debug("Starting background image processing thread...")
             processing_thread = threading.Thread(target=background_processing_loop, daemon=True, name="BackgroundThread")
             processing_thread.start()
