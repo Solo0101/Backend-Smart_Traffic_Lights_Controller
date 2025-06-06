@@ -77,8 +77,8 @@ EXPOSE 8000
 # CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # For production (using Gunicorn or another WSGI server):
-#CMD ["gunicorn","–config=gunicorn_config.py","stream.wsgi:application"]
-#CMD ["gunicorn", "--bind", "0.0.0.0:8000", "stream.wsgi:application"]
+#CMD ["/bin/sh run.sh"]
+
 
 # For production (using Daphne or another ASGI server):
 #CMD ["daphne", "-b", "0.0.0.0", "-p", "8001", "stream.asgi:application"]

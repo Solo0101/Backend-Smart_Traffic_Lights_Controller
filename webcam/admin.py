@@ -1,3 +1,7 @@
 from django.contrib import admin
 
-# Register your models here.
+from webcam.models import IntersectionModel, UserProfileModel, IntersectionEntryModel
+
+admin.site.register(IntersectionModel)
+admin.site.register(IntersectionEntryModel)
+admin.site.register(UserProfileModel)

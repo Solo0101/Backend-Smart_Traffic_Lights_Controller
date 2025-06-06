@@ -62,45 +62,45 @@ def background_processing_loop():
     old_in_intersection_list = []
     current_state = pi_connection_manager.get_pi_request_data()["STATE"]
 
-    from webcam.models import IntersectionModel
-    intersection = IntersectionModel.objects.create(
-        id=constants.INTERSECTION_ID,
-        name="Intersectia Sagului",
-        address="Arta Textila/Calea Sagului",
-        country="Romania",
-        city="Timisoara",
-        coordXY= Point((Decimal(45.7326), Decimal(21.2087))),
-        entriesNumber=4,
-        entriesCoordinates={
-            "entrieNumber0": {
-                "0": Point((Decimal(45.73345133391029), Decimal(21.208923482493322))),
-                "1": Point((Decimal(45.732778809752986), Decimal(21.208661338471636))),
-            },
-            "entrieNumber1": {
-                "0": Point((Decimal(45.73258010646519), Decimal(21.21033038494067))),
-                "1": Point((Decimal(45.732627351713), Decimal(21.20895365734474)))
-            },
-            "entrieNumber2": {
-                "0": Point((Decimal(45.73175472315487), Decimal(21.208392593701202))),
-                "1": Point((Decimal(45.732389742401345), Decimal(21.20871980224627)))
-            },
-            "entrieNumber3": {
-                "0": Point((Decimal(45.732751019386946), Decimal(21.20690553930478))),
-                "1": Point((Decimal(45.73256621257191), Decimal(21.20838127813192)))
-            }
-        },
-        entriesTrafficScore=
-        {
-            "entrieNumber0": 25,
-            "entrieNumber1": 60,
-            "entrieNumber2": 17,
-            "entrieNumber3": 90
-        },
-        individualToggle=False,
-        is_smart_algorithm_enabled=True
-    )
+    # from webcam.models import IntersectionModel
+    # intersection = IntersectionModel.objects.create(
+    #     id="someId",
+    #     name="Intersectia Sagului",
+    #     address="Arta Textila/Calea Sagului",
+    #     country="Romania",
+    #     city="Timisoara",
+    #     coordXY= Point((Decimal(45.7326), Decimal(21.2087))),
+    #     entriesNumber=4,
+    #     entriesCoordinates={
+    #         "entrieNumber0": {
+    #             "0": Point((Decimal(45.73345133391029), Decimal(21.208923482493322))),
+    #             "1": Point((Decimal(45.732778809752986), Decimal(21.208661338471636))),
+    #         },
+    #         "entrieNumber1": {
+    #             "0": Point((Decimal(45.73258010646519), Decimal(21.21033038494067))),
+    #             "1": Point((Decimal(45.732627351713), Decimal(21.20895365734474)))
+    #         },
+    #         "entrieNumber2": {
+    #             "0": Point((Decimal(45.73175472315487), Decimal(21.208392593701202))),
+    #             "1": Point((Decimal(45.732389742401345), Decimal(21.20871980224627)))
+    #         },
+    #         "entrieNumber3": {
+    #             "0": Point((Decimal(45.732751019386946), Decimal(21.20690553930478))),
+    #             "1": Point((Decimal(45.73256621257191), Decimal(21.20838127813192)))
+    #         }
+    #     },
+    #     entriesTrafficScore=
+    #     {
+    #         "entrieNumber0": 25,
+    #         "entrieNumber1": 60,
+    #         "entrieNumber2": 17,
+    #         "entrieNumber3": 90
+    #     },
+    #     individualToggle=False,
+    #     is_smart_algorithm_enabled=True
+    # )
 
-    intersection.save()
+    # intersection.save()
 
 
 
@@ -186,9 +186,6 @@ class WebcamConfig(AppConfig):
         if os.environ.get('RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN'):
             main_thread = threading.current_thread()
             main_thread.name = str("MainThread")
-            from webcam.models import IntersectionModel
-            intersection2 = IntersectionModel.objects.get(id=constants.INTERSECTION_ID)
-            print(intersection2.name)
             logger_main.debug("Starting background image processing thread...")
             processing_thread = threading.Thread(target=background_processing_loop, daemon=True, name="BackgroundThread")
             processing_thread.start()

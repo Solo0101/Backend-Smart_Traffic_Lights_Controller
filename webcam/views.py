@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
 from webcam import utils
+from webcam.intersection import Intersection
+from webcam.models import IntersectionModel
 from webcam.traffic_light_controller_service import toggle_traffic_lights
 from webcam.utils import logger_background
 from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager
@@ -21,8 +23,6 @@ def index(request):
 # -----------------------------------
 
 #? REST API ENDPOINTS
-#TODO: Create Intersection class to handle statistics and smart algorithm toggle endpoint +  for housekeeping purposes
-#TODO: Create more response options and codes if needed
 
 #! GET REQUESTS -------------------------
 @api_view(['GET'])
@@ -30,53 +30,169 @@ def get_statistics(request):
     #TODO: Implement
     pass
 
+@api_view(['GET'])
 def get_current_intersection_status(request):
     current_pi_update = pi_connection_manager.get_pi_request_data()
     return Response(current_pi_update.to_json(), status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+def get_intersection(request, intersection_id):
+    intersection_obj = Intersection.load_from_db(intersection_id)
+    if intersection_obj:
+        return Response(intersection_obj.to_json(), status=status.HTTP_200_OK)
+    return Response({"error": "Intersection not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def get_all_intersections(request):
+    """
+    Retrieves all Intersection objects from the database.
+    """
+    try:
+        intersection_models = IntersectionModel.objects.all()
+
+        all_intersections_data = []
+        for model_instance in intersection_models:
+            intersection_obj = Intersection.load_from_db(model_instance.id)
+            if intersection_obj:
+                all_intersections_data.append(intersection_obj.to_json())
+
+        return Response(all_intersections_data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger_background.exception(f"Error retrieving all intersections: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while retrieving intersections."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 #! POST REQUESTS -------------------------
 @api_view(['POST'])
 def post_traffic_light_toggle(request):
-    current_pi_update = pi_connection_manager.get_pi_request_data()
-    toggle_traffic_lights(current_pi_update["STATE"])
-    return Response(status=status.HTTP_202_ACCEPTED)
+    try:
+        current_pi_update = pi_connection_manager.get_pi_request_data()
+        toggle_traffic_lights(current_pi_update["STATE"])
+        return Response(status=status.HTTP_202_ACCEPTED)
+    except Exception as e:
+        logger_background.exception(f"Error toggling traffic lights: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while toggling traffic lights."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_light_all_red(request):
-    send_pi_request(message_payload={
-        "action": "AllRed",
-        "direction": ""
-    })
-    return Response(status=status.HTTP_202_ACCEPTED)
+    try:
+        send_pi_request(message_payload={
+            "action": "AllRed",
+            "direction": ""
+        })
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+    except Exception as e:
+        logger_background.exception(f"Error setting all lights to red: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while setting all lights to red."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_light_hazard_mode(request):
-    send_pi_request(message_payload={
-        "action": "HazardMode",
-        "direction": ""
-    })
-    return Response(status=status.HTTP_202_ACCEPTED)
+    try:
+        send_pi_request(message_payload={
+            "action": "HazardMode",
+            "direction": ""
+        })
+        return Response(status=status.HTTP_202_ACCEPTED)
+    except Exception as e:
+        logger_background.exception(f"Error setting hazard mode: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while setting hazard mode."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_lights_off(request):
-    send_pi_request(message_payload={
-        "action": "AllOff",
-        "direction": ""
-    })
-    return Response(status=status.HTTP_202_ACCEPTED)
+    try:
+        send_pi_request(message_payload={
+            "action": "AllOff",
+            "direction": ""
+        })
+        return Response(status=status.HTTP_202_ACCEPTED)
+    except Exception as e:
+        logger_background.exception(f"Error turning off traffic lights: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while turning off traffic lights."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_light_resume(request):
-    send_pi_request(message_payload={
-        "action": "Resume",
-        "direction": ""
-    })
-    return Response(status=status.HTTP_202_ACCEPTED)
+    try:
+        send_pi_request(message_payload={
+            "action": "Resume",
+            "direction": ""
+        })
+        return Response(status=status.HTTP_202_ACCEPTED)
+    except Exception as e:
+        logger_background.exception(f"Error resuming traffic lights: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while resuming traffic lights."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-def post_traffic_light_toggle_smart_algorithm(request):
-    # intersectionManager.toggle_smart_intersection_algorithm()
-    return Response(status=status.HTTP_202_ACCEPTED)
+def post_traffic_light_toggle_smart_algorithm(request, intersection_id):
+    try:
+        if IntersectionModel.objects.filter(id=intersection_id).exists():
+            intersection_obj = Intersection.load_from_db(intersection_id)
+            intersection_obj.is_smart_algorithm_enabled = not intersection_obj.is_smart_algorithm_enabled
+            intersection_obj.save_to_db()
+            return Response(status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger_background.exception(f"Error toggling smart algorithm for intersection {intersection_id}: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while toggling smart algorithm."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def create_intersection(request):
+    try:
+        intersection_obj = Intersection.from_json(request.data)
+        intersection_model_instance = intersection_obj.save_to_db()
+        return Response(
+            {"message": "Intersection processed successfully.", "id": intersection_model_instance.Id},
+            status=status.HTTP_201_CREATED
+        )
+    except ValueError as ve:
+        return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        # Log the full error for debugging
+        logger_background.error(f"Error in create_intersection: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#! PUT REQUESTS (for updates) -------------------------
+@api_view(['PUT'])
+def update_intersection(request, intersection_id):
+    try:
+        # Check if the intersection exists
+        if not IntersectionModel.objects.filter(id=intersection_id).exists():
+            return Response({"error": f"Intersection with id '{intersection_id}' not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Ensure the 'id' in the request body matches the URL, or is not present (to avoid confusion)
+        request_data_id = request.data.get('id')
+        if request_data_id and request_data_id != intersection_id:
+            return Response({"error": f"Intersection ID in URL ('{intersection_id}') does not match ID in request body ('{request_data_id}')."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # If 'id' is not in request.data, add it from the URL to ensure from_json works as expected
+        if 'id' not in request.data:
+            request.data['id'] = intersection_id
+
+        intersection_obj = Intersection.from_json(request.data)
+
+        intersection_model_instance = intersection_obj.save_to_db()
+
+        return Response(
+            {"message": "Intersection updated successfully.", "id": intersection_model_instance.Id},
+            status=status.HTTP_200_OK
+        )
+    except ValueError as ve:
+        return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger_background.error(f"Error in update_intersection: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#! DELETE REQUESTS ------------------------------------
+
+@api_view(['DELETE'])
+def delete_intersection(request, intersection_id):
+    if Intersection.delete_from_db(intersection_id):
+        return Response({"message": "Intersection deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"error": "Failed to delete intersection or not found"}, status=status.HTTP_404_NOT_FOUND)
 
 # -----------------------------------
 

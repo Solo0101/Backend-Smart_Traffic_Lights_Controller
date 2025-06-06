@@ -12,5 +12,11 @@ urlpatterns = [
     path('traffic_light/post/post_traffic_light_hazard_mode', views.post_traffic_light_hazard_mode, name="post_traffic_light_hazard_mode"),
     path('traffic_light/post/post_traffic_lights_off', views.post_traffic_lights_off, name="post_traffic_lights_off"),
     path('traffic_light/post/post_traffic_light_resume', views.post_traffic_light_resume, name="post_traffic_light_resume"),
-    path('traffic_light/post/post_traffic_light_toggle_smart_algorithm', views.post_traffic_light_toggle_smart_algorithm, name="post_traffic_light_toggle_smart_algorithm"),
+    path('traffic_light/post/post_traffic_light_toggle_smart_algorithm/<str:intersection_id>', views.post_traffic_light_toggle_smart_algorithm, name="post_traffic_light_toggle_smart_algorithm"),
+    path('intersection/post/create_intersection', views.create_intersection, name="create_intersection"),
+    path('intersection/put/update_intersection/<str:intersection_id>', views.update_intersection, name="update_intersection"),
+    path('intersection/get/get_intersection/<str:intersection_id>', views.get_intersection, name="get_intersection"),
+    path('intersection/get/get_all_intersections', views.get_all_intersections, name="get_all_intersections"),
+    path('intersection/delete/delete_intersection/<str:intersection_id>', views.delete_intersection, name="delete_intersection"),
+
 ]
