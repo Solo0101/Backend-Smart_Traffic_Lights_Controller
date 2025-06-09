@@ -144,7 +144,7 @@ def create_intersection(request):
         intersection_obj = Intersection.from_json(request.data)
         intersection_model_instance = intersection_obj.save_to_db()
         return Response(
-            {"message": "Intersection processed successfully.", "id": intersection_model_instance.Id},
+            {"message": "Intersection processed successfully.", "id": intersection_model_instance.id},
             status=status.HTTP_201_CREATED
         )
     except ValueError as ve:
@@ -177,7 +177,7 @@ def update_intersection(request, intersection_id):
         intersection_model_instance = intersection_obj.save_to_db()
 
         return Response(
-            {"message": "Intersection updated successfully.", "id": intersection_model_instance.Id},
+            {"message": "Intersection updated successfully.", "id": intersection_model_instance.id},
             status=status.HTTP_200_OK
         )
     except ValueError as ve:

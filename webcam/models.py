@@ -7,14 +7,14 @@ class IntersectionModel(models.Model):
     address = models.CharField(unique=True, max_length=100, default="", null=False, name="address")
     country = models.CharField(max_length=100, default="", null=False, name="country")
     city = models.CharField(max_length=100, default="", null=False, name="city")
-    coordXY =  gis_models.PointField(srid=4326, name="coordinates", null=True)
-    entriesNumber = models.IntegerField(name="entries_number", null=True)
-    individualToggle = models.BooleanField(default=False, name="individual_toggle")
-    enabled_smart_algorithm = models.BooleanField(default=True, name="enabled_smart_algorithm")
+    coordinates =  gis_models.PointField(srid=4326, name="coordinates", null=True)
+    entries_number = models.IntegerField(name="entries_number", null=True)
+    individual_toggle = models.BooleanField(default=False, name="individual_toggle")
+    smart_algorithm_enabled = models.BooleanField(default=True, name="smart_algorithm_enabled")
 
 class IntersectionEntryModel(models.Model):
     id = models.CharField(max_length=100, primary_key=True, name="id", null=False, unique=True, default="")
-    intersectionId = models.ForeignKey(
+    intersection_id = models.ForeignKey(
         IntersectionModel,
         to_field='id',
         on_delete=models.CASCADE,
