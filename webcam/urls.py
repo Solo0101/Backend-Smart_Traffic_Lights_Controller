@@ -1,10 +1,20 @@
 from django.urls import path
-
 from webcam import views
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 urlpatterns = [
+#? --- AUTHENTICATION URLS ---
+    path('auth/register/', views.RegisterView.as_view(), name='auth_register'),
+    path('auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/me/<str:username>', views.CurrentUserView.as_view(), name='auth_me'),
+#? --- STREAM WEB VIEW URLS ---
     path('index/', views.index),
     path('video_feed/', views.video_feed, name="video-feed-1"),
+#? --- REST API URLS ---
     path('traffic_light/get/get_statistics', views.get_statistics, name="get_statistics"),
     path('traffic_light/get/get_current_intersection_status', views.get_current_intersection_status, name="get_current_intersection_status"),
     path('traffic_light/post/post_traffic_light_toggle', views.post_traffic_light_toggle, name="post_traffic_light_toggle"),

@@ -1,18 +1,22 @@
 import asyncio
 
+from django.contrib.auth.models import User
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.template import loader
 from django.http.response import StreamingHttpResponse
-from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
 
 from webcam import utils
 from webcam.intersection import Intersection
-from webcam.models import IntersectionModel
+from webcam.models import IntersectionModel, UserProfileModel
 from webcam.traffic_light_controller_service import toggle_traffic_lights
-from webcam.utils import logger_background
+from webcam.utils import logger_background, logger_main
 from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager
+
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from webcam.serializers import RegisterSerializer, UserDetailSerializer
 
 
 # HOME PAGE -------------------------
@@ -21,6 +25,34 @@ def index(request):
     return HttpResponse(template.render({}, request))
 
 # -----------------------------------
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    # Allow any user (even unauthenticated) to access this view
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = RegisterSerializer
+
+class CurrentUserView(generics.RetrieveUpdateAPIView):
+    """
+    An endpoint to get data for the currently authenticated user.
+    """
+    queryset = User.objects.all()
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = UserDetailSerializer
+    #
+    # def get_object(self):
+    #     return self.request.user
+
+    def get_object(self):
+        # Get the username from the URL's keyword arguments
+        username = self.kwargs.get('username')
+        try:
+            obj = get_object_or_404(self.get_queryset(), username__iexact=username)
+            obj.profile = get_object_or_404(UserProfileModel, user_id=obj.id)
+            return obj
+        except Exception as e:
+            logger_main.exception(e)
+            return None
 
 #? REST API ENDPOINTS
 
@@ -195,6 +227,7 @@ def delete_intersection(request, intersection_id):
     return Response({"error": "Failed to delete intersection or not found"}, status=status.HTTP_404_NOT_FOUND)
 
 # -----------------------------------
+
 
 # DISPLAY CAMERA  ------------------
 

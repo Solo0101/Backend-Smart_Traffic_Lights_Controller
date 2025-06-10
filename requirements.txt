@@ -7,6 +7,7 @@ vidgear~=0.3.2
 ultralytics~=8.3.119
 tqdm~=4.66.4
 djangorestframework~=3.16.0
+djangorestframework-simplejwt~=5.5.0
 matplotlib~=3.8.4
 lapx~=0.5.11
 yt_dlp~=2025.3.31

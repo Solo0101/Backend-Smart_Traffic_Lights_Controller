@@ -188,7 +188,7 @@ class Intersection:
                 new_entry_id = str(uuid.uuid4())
                 IntersectionEntryModel.objects.create(
                     id=new_entry_id,
-                    intersection_id=intersection_instance,
+                    intersection=intersection_instance,
                     entry_number=entry_index,
                     coordinates1=DjangoGEOSPoint(),
                     coordinates2=DjangoGEOSPoint(),
