@@ -54,7 +54,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     """
     # This nests the UserProfileSerializer. The 'profile' name comes from the
     # related_name we set on the OneToOneField in models.py.
-    profile = UserProfileSerializer(read_only=True)
+    profile = UserProfileSerializer()
 
     class Meta:
         model = User
@@ -64,6 +64,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         #TODO: Investigate here why profile data gets ignored
         profile_data = validated_data.pop('profile', {})
+        print(profile_data)
 
         profile_instance = instance.profile
 
