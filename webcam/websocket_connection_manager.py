@@ -79,5 +79,4 @@ class PiConnectionStatusManager:
             "STATE": "NORTH_SOUTH_GREEN", "NSG": 42, "NSY": 3, "EWG": 42, "EWY": 3
         }
 
-
 pi_connection_manager = PiConnectionStatusManager()

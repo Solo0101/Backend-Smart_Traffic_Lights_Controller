@@ -10,6 +10,7 @@ DETECTION_MODEL = 'yolo'
 DETECTION_MODEL_FILE = 'yolo12x.pt'
 
 PI_COMMUNICATION_GROUP = "pi_comms_group"
+MOBILE_APP_COMMUNICATION_GROUP = "mobile_app_group"
 
 with open(
         os.path.join('webcam',
@@ -53,7 +54,9 @@ CURRENT_STATE_DICT = {
     "NORTH_SOUTH_GREEN": 0,
     "NORTH_SOUTH_YELLOW": 1,
     "EAST_WEST_GREEN": 2,
-    "EAST_WEST_YELLOW": 3
+    "EAST_WEST_YELLOW": 3,
+    "ALL_OFF:": 4,
+    "ALL_YELLOW": 5
 }
 
 FRAME_RATE = 15
@@ -68,8 +71,6 @@ ENABLE_VEHICLES_IN_ROIS_LOGGING = True
 SMART_CONTROL_INTERVAL = 1.0 # 1 second
 EDGE_CASES_OPTIMIZATIONS_COOLDOWN = 15.0 # 15 seconds
 
-INTERSECTION_ID = "o8vambZlqYwDqNybrJwm"
-
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=ByED80IKdIU"
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=NAk9Ku-n0Sk"
 
@@ -79,12 +80,15 @@ INTERSECTION_ID = "o8vambZlqYwDqNybrJwm"
 
 # libcamera-vid --mode 2592:1944:12:P --codec mjpeg --awb indoor --contrast 1.5 --saturation 1.5 -b 5000000 --flush 1 --sharpness 1.5 --denoise cdn_hq --autofocus-mode continuous --framerate 15 -t 0 --inline --listen -o tcp://0.0.0.0:8888
 
+
+# TODO: Move these into .env file
 # VIDEO_SOURCE = "tcp://raspberrypizero2w.local:8888"
 # VIDEO_SOURCE = "tcp://raspberrypizero2w-tcp.at.remote.it:8888"
 # VIDEO_SOURCE = "tcp://eu1.pitunnel.net:60605"
 VIDEO_SOURCE = "tcp://127.0.0.1:8888"
 # VIDEO_SOURCE = "tcp://192.168.1.9:8888"
 
+INTERSECTION_ID = "89b04f61-90a6-4aba-8941-eef047cd3eb0"
 
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=Vz4f8Gy6P1Q"
 # VIDEO_SOURCE = "https://www.youtube.com/watch?v=sPe_XHhO5aw"

@@ -31,6 +31,54 @@ class IntersectionEntryModel(models.Model):
     coordinates2 = gis_models.PointField(srid=4326, name="coordinates2", null=True)
     traffic_score = models.IntegerField(name="traffic_score", default=0)
 
+class AvgWaitingTimeDataPointModel(models.Model):
+    id = models.CharField(max_length=100, primary_key=True, name="id", null=False, unique=True, default="")
+    intersection = models.ForeignKey(
+        IntersectionModel,
+        to_field='id',
+        on_delete=models.CASCADE,
+        name="intersection",
+        null=True,
+        related_name='avg_waiting_time_data',
+    )
+
+    timestamp = models.DateTimeField(db_index=True)
+
+    value = models.FloatField()
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['intersection', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"Data for {self.intersection.name} at {self.timestamp}"
+
+class AvgVehicleThroughputDataPointModel(models.Model):
+    id = models.CharField(max_length=100, primary_key=True, name="id", null=False, unique=True, default="")
+    intersection = models.ForeignKey(
+        IntersectionModel,
+        to_field='id',
+        on_delete=models.CASCADE,
+        name="intersection",
+        null=True,
+        related_name='avg_vehicle_throughput_data',
+    )
+
+    timestamp = models.DateTimeField(db_index=True)
+
+    value = models.FloatField()
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['intersection', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"Data for {self.intersection.name} at {self.timestamp}"
+
 class UserProfileModel(models.Model):
     user = models.OneToOneField(
         User,

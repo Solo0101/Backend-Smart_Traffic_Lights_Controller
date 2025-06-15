@@ -32,7 +32,10 @@ def get_action_direction(current_pi_update):
 
 def get_waiting(roi_list, current_state, waiting_list):
     waiting_score=0
-    if current_state == "NORTH_SOUTH_GREEN" or current_state == "NORTH_SOUTH_YELLOW":
+    if current_state == "ALL_YELLOW" or current_state == "ALL_OFF":
+        for i in range(0, len(waiting_list), 1):
+            waiting_list[i] = 0
+    elif current_state == "NORTH_SOUTH_GREEN" or current_state == "NORTH_SOUTH_YELLOW":
         for i in range(0, len(roi_list)-1, 2):
             waiting_list[i * 2] = -(len(roi_list[i]) // -2)
             waiting_list[i * 2 + 1] = len(roi_list[i]) / 2
@@ -40,7 +43,6 @@ def get_waiting(roi_list, current_state, waiting_list):
             waiting_list[i * 2 + 3] = 0
             for vehicle in roi_list[i]:
                 waiting_score += constants.WAITING_SCORE_PENALTY[vehicle[0]]
-
     elif current_state == "EAST_WEST_GREEN" or current_state == "EAST_WEST_YELLOW":
         for i in range(1, len(roi_list)-1, 2):
             waiting_list[(i - 1) * 2] = 0
@@ -79,10 +81,14 @@ def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_
         return last_smart_edge_cases_control_time
 
     empty_rois = 0
-
+    entry_number = 0
     for roi in roi_list:
+        from webcam.models import IntersectionEntryModel
+        IntersectionEntryModel.objects.filter(intersection_id=constants.INTERSECTION_ID, entry_number=entry_number).update(traffic_score=len(roi))
+
         if len(roi) == 0:
             empty_rois += 1
+        entry_number += 1
 
     if empty_rois < 2:
         return last_smart_edge_cases_control_time
@@ -100,13 +106,14 @@ def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_
 
     return last_smart_edge_cases_control_time
 
-def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list):
-    if (current_loop_time - last_smart_control_time) >= constants.SMART_CONTROL_INTERVAL: # Execute every 1 second
+def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list, toggle_actions_number):
+    current_pi_update = pi_connection_manager.get_pi_request_data()
+    waiting_score, waiting_list = get_waiting(roi_list, current_pi_update["STATE"], waiting_list)
+    if (current_loop_time - last_smart_control_time) >= constants.SMART_CONTROL_INTERVAL and current_pi_update["STATE"] not in ["ALL_OFF", "ALL_YELLOW", "ALL_RED"]: # Execute every 1 second
+        print(current_pi_update["STATE"])
 
         last_smart_edge_cases_control_time = edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_edge_cases_control_time) # If action taken has a cooldown of 15 seconds
 
-        current_pi_update = pi_connection_manager.get_pi_request_data()
-        waiting_score, waiting_list = get_waiting(roi_list, current_pi_update["STATE"], waiting_list)
 
         state_array = np.array(
             [-(len(roi_list[0]) // -2), len(roi_list[0]) / 2,
@@ -142,6 +149,7 @@ def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_interse
 
         if current_state != current_pi_update["STATE"] and current_state in ["NORTH_SOUTH_GREEN", "EAST_WEST_GREEN"]:
             last_smart_edge_cases_control_time = current_loop_time
+            toggle_actions_number += 1
             match action:
                 case 0:
                     send_pi_request(message_payload={
@@ -165,7 +173,7 @@ def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_interse
         last_smart_control_time = current_loop_time
         current_state = current_pi_update["STATE"]
 
-    return last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list
+    return last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list, toggle_actions_number, len(get_delta_new_cars_in_intersection_list(old_in_intersection_list, roi_list[4]))
 
 def debugging_print_vehicles_in_rois(roi_list):
     if constants.ENABLE_VEHICLES_IN_ROIS_LOGGING:

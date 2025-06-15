@@ -10,11 +10,14 @@ from geojson import Point
 
 from webcam import constants
 from webcam.dqn_per import DQNPERAgent
-from webcam.traffic_light_controller_service import debugging_print_vehicles_in_rois, draw_debugging_dot_to_calculated_tracked_car, smart_control_traffic_lights
+from webcam.traffic_light_controller_service import debugging_print_vehicles_in_rois, \
+    draw_debugging_dot_to_calculated_tracked_car, smart_control_traffic_lights
 from webcam.websocket_connection_manager import pi_connection_manager
 from webcam.yolo_roi_tracker import roi_tracking, draw_rois
 from webcam.utils import check_wanted_classes, get_video_stream, get_frame, frame_lock, \
-    latest_processed_frame_bytes, logger_main, logger_background, load_models, debug_info_gpu_utilization
+    latest_processed_frame_bytes, logger_main, logger_background, load_models, debug_info_gpu_utilization, \
+    collect_statistics
+
 
 def background_processing_loop():
     debug_info_gpu_utilization()
@@ -51,9 +54,8 @@ def background_processing_loop():
     frame_number = 0
     real_frame_number = 0
     waiting_score = 0
+    past_waiting_score = 0
     waiting_list = [0, 0, 0, 0, 0, 0, 0, 0]
-    analytic_list_waiting_score = []
-    analytic_list_throughput_score = []
 
     vid = get_video_stream()
 
@@ -61,6 +63,8 @@ def background_processing_loop():
     last_smart_edge_cases_control_time = time.monotonic()  # Initialize with current time
     old_in_intersection_list = []
     current_state = pi_connection_manager.get_pi_request_data()["STATE"]
+    toggle_actions_number = 0
+    new_vehicles_in_intersection = 0
 
     while True:
         current_loop_time = time.monotonic()
@@ -71,6 +75,10 @@ def background_processing_loop():
                 time.sleep(5.0)
                 real_frame_number = 0
                 waiting_score = 0
+                toggle_actions_number = 0
+                current_loop_time = 0
+                last_smart_control_time = 0
+                last_smart_edge_cases_control_time = 0
                 vid = get_video_stream()
                 continue
             frame = cv2.resize(frame, (1000, 700))
@@ -95,11 +103,19 @@ def background_processing_loop():
 
             # Smart traffic controller
             # Execute every 1 second
-            # if intersectionManager.is_smart_intersection_algorithm_enabled():
-            last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list = smart_control_traffic_lights(traffic_control_agent,
-                                                                                                            [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
-                                                                                                            old_in_intersection_list, current_state,
-                                                                                                            waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list)
+            from webcam.models import IntersectionModel
+            if IntersectionModel.objects.get(id=constants.INTERSECTION_ID).smart_algorithm_enabled:
+                (last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list,
+                 current_state, waiting_score, waiting_list, toggle_actions_number, tmp_new_vehicles_in_intersection) = \
+                    smart_control_traffic_lights(
+                        traffic_control_agent,
+                        [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4,
+                         vehicles_in_intersection],
+                        old_in_intersection_list, current_state,
+                        waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time,
+                        waiting_list, toggle_actions_number)
+
+                new_vehicles_in_intersection += tmp_new_vehicles_in_intersection
 
             # Display resulted an object tracking bounding boxes
             annotated_frame = results[0].plot()
@@ -112,6 +128,10 @@ def background_processing_loop():
             # if constants.ENABLE_ANALYTICS_PLOTTING:
             #     save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, analytic_list_waiting_score,
             #                         analytic_list_throughput_score)
+
+            past_waiting_score = collect_statistics(waiting_score, last_smart_edge_cases_control_time,
+                                                    toggle_actions_number, current_loop_time, past_waiting_score,
+                                                    new_vehicles_in_intersection)
 
             if constants.DISPLAY_ROIS:
                 annotated_frame = draw_rois(annotated_frame, roi1, roi2, roi3, roi4, roi_central)
@@ -145,6 +165,7 @@ class WebcamConfig(AppConfig):
             main_thread = threading.current_thread()
             main_thread.name = str("MainThread")
             logger_main.debug("Starting background image processing thread...")
-            processing_thread = threading.Thread(target=background_processing_loop, daemon=True, name="BackgroundThread")
+            processing_thread = threading.Thread(target=background_processing_loop, daemon=True,
+                                                 name="BackgroundThread")
             processing_thread.start()
             logger_main.debug("Background image processing thread started.")

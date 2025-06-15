@@ -1,10 +1,14 @@
+import abc
+import datetime
 import json
 import uuid
+from abc import ABC
 
 from django.contrib.gis.geos import Point as DjangoGEOSPoint, GEOSException
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
-from webcam.models import IntersectionModel, IntersectionEntryModel
+from webcam.models import IntersectionModel, IntersectionEntryModel, AvgVehicleThroughputDataPointModel, \
+    AvgWaitingTimeDataPointModel
 from webcam.utils import logger_main
 
 def _convert_json_to_point(data) -> DjangoGEOSPoint | None:
@@ -46,6 +50,89 @@ def _convert_json_to_point(data) -> DjangoGEOSPoint | None:
     except (GEOSException, TypeError, ValueError, KeyError) as e:
         print(f"An error occurred during conversion: {e}")
         return None
+
+class DataPoint(ABC):
+    def __init__(self, intersection_id, timestamp, value):
+        self.intersection_id = intersection_id
+        self.timestamp = timestamp
+        self.value = value
+
+    def to_json(self):
+        return {
+            "timestamp": self.timestamp,
+            "value": self.value
+        }
+
+    @transaction.atomic
+    @abc.abstractmethod
+    def save_to_db(self):
+        raise NotImplementedError("Please Implement this method")
+
+    @classmethod
+    @abc.abstractmethod
+    def load_from_db(cls, intersection_id):
+        raise NotImplementedError("Please Implement this method")
+
+
+class AvgWaitingTimeDataPoint(DataPoint):
+    @transaction.atomic
+    def save_to_db(self):
+        AvgWaitingTimeDataPointModel.objects.create(
+            id=str(uuid.uuid4()),
+            intersection_id=self.intersection_id,
+            timestamp=datetime.datetime.now(),
+            value=self.value
+        )
+
+    @classmethod
+    def load_from_db(cls, intersection_id):
+        try:
+            intersection_instance = IntersectionModel.objects.get(id=intersection_id)
+            loaded_data_points = AvgWaitingTimeDataPointModel.objects.filter(intersection_id=intersection_instance.id)
+            loaded_data_points_list = []
+            for loaded_data_point in loaded_data_points:
+                loaded_data_points_list.append(cls(
+                    intersection_id=loaded_data_point.intersection_id,
+                    timestamp=loaded_data_point.timestamp,
+                    value=loaded_data_point.value
+                ))
+
+            loaded_data_points_list.sort(key=lambda data_point: data_point.timestamp, reverse=True)
+            return loaded_data_points_list
+        except Exception as e:
+            logger_main.error(f"Error loading AvgWaitingTimeDataPoint list for intersection ID {intersection_id} from DB: {e}", exc_info=True)
+            return None
+
+class AvgVehicleThroughputDataPoint(DataPoint):
+    @transaction.atomic
+    def save_to_db(self):
+        AvgVehicleThroughputDataPointModel.objects.create(
+            id=str(uuid.uuid4()),
+            intersection_id=self.intersection_id,
+            timestamp=datetime.datetime.now(),
+            value=self.value
+        )
+
+    @classmethod
+    def load_from_db(cls, intersection_id):
+        try:
+            intersection_instance = IntersectionModel.objects.get(id=intersection_id)
+            loaded_data_points = AvgVehicleThroughputDataPointModel.objects.filter(intersection_id=intersection_instance.id)
+            loaded_data_points_list = []
+            for loaded_data_point in loaded_data_points:
+                loaded_data_points_list.append(cls(
+                    intersection_id=loaded_data_point.intersection_id,
+                    timestamp=loaded_data_point.timestamp,
+                    value=loaded_data_point.value
+                ))
+
+            loaded_data_points_list.sort(key=lambda data_point: data_point.timestamp, reverse=True)
+            return loaded_data_points_list
+        except Exception as e:
+            logger_main.error(f"Error loading AvgVehicleThroughputDataPoint list for intersection ID {intersection_id} from DB: {e}", exc_info=True)
+            return None
+
+
 
 class IntersectionEntry:
     def __init__(self, entry_id, entry_number, traffic_score, coordinates1=DjangoGEOSPoint(), coordinates2=DjangoGEOSPoint()):
@@ -90,7 +177,7 @@ class IntersectionEntry:
                 ))
             return entries_list
         except Exception as e:
-            logger_main.error(f"Error loading intersection ID {intersection_id} from DB: {e}", exc_info=True)
+            logger_main.error(f"Error loading entries list for intersection ID {intersection_id} from DB: {e}", exc_info=True)
             return None
 
 class Intersection:
@@ -106,6 +193,8 @@ class Intersection:
         self.individualToggle = individual_toggle
         self.smartAlgorithmEnabled = smart_algorithm_enabled
         self.entries = entries
+        self.avg_waiting_time_data_points = AvgWaitingTimeDataPoint.load_from_db(intersection_id)
+        self.avg_vehicle_throughput_data_points = AvgVehicleThroughputDataPoint.load_from_db(intersection_id)
 
     @classmethod
     def from_json(cls, data):
@@ -156,7 +245,9 @@ class Intersection:
             "entriesNumber": self.entriesNumber,
             "individualToggle": self.individualToggle,
             "smartAlgorithmEnabled": self.smartAlgorithmEnabled,
-            "entries": [entry.to_json() for entry in self.entries]
+            "entries": [entry.to_json() for entry in self.entries],
+            "avgWaitingTimeDataPoints": [avg_waiting_time_data_point.to_json() for avg_waiting_time_data_point in self.avg_waiting_time_data_points],
+            "avgVehicleThroughputDataPoints": [avg_vehicle_throughput_data_point.to_json() for avg_vehicle_throughput_data_point in self.avg_vehicle_throughput_data_points]
         }
 
     @transaction.atomic

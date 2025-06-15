@@ -8,14 +8,15 @@ from django.http.response import StreamingHttpResponse
 from rest_framework.response import Response
 
 from webcam import utils
-from webcam.intersection import Intersection
-from webcam.models import IntersectionModel, UserProfileModel
+from webcam.intersection import Intersection, AvgWaitingTimeDataPoint, AvgVehicleThroughputDataPoint, IntersectionEntry
+from webcam.models import IntersectionModel, UserProfileModel, AvgWaitingTimeDataPointModel, \
+    AvgVehicleThroughputDataPointModel
 from webcam.traffic_light_controller_service import toggle_traffic_lights
-from webcam.utils import logger_background, logger_main
+from webcam.utils import logger_main
 from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager
 
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view
 from webcam.serializers import RegisterSerializer, UserDetailSerializer
 
 
@@ -58,21 +59,49 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
 
 #! GET REQUESTS -------------------------
 @api_view(['GET'])
-def get_statistics(request):
-    #TODO: Implement
-    pass
+def get_statistics(request, intersection_id):
+    try:
+        avg_waiting_time_data = AvgWaitingTimeDataPoint.load_from_db(intersection_id)
+        avg_vehicle_throughput_data = AvgVehicleThroughputDataPoint.load_from_db(intersection_id)
+        entries = IntersectionEntry.load_from_db(intersection_id)
+
+        entries.sort(key=lambda entry: entry.entry_number)
+
+        data = {
+            "avgWaitingTimeData": avg_waiting_time_data[0].to_json() if len(avg_waiting_time_data) != 0 else {},
+            "avgVehicleThroughputData": avg_vehicle_throughput_data[0].to_json() if len(avg_vehicle_throughput_data) != 0 else {},
+            "entriesTrafficScores": {f"entry{entry.entry_number}": entry.to_json()["trafficScore"] if entry else 0 for entry in entries},
+            "intersectionConnectionStatus": pi_connection_manager.is_connected()
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+    except IntersectionModel.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger_main.exception(f"Error retrieving statistics: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while retrieving intersection."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def get_current_intersection_status(request):
     current_pi_update = pi_connection_manager.get_pi_request_data()
-    return Response(current_pi_update.to_json(), status=status.HTTP_200_OK)
+    return Response(
+        {
+            "connected": pi_connection_manager.is_connected(),
+            "state": current_pi_update.to_json()
+        }, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_intersection(request, intersection_id):
-    intersection_obj = Intersection.load_from_db(intersection_id)
-    if intersection_obj:
-        return Response(intersection_obj.to_json(), status=status.HTTP_200_OK)
-    return Response({"error": "Intersection not found"}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        intersection_obj = Intersection.load_from_db(intersection_id)
+        if intersection_obj:
+            return Response(intersection_obj.to_json(), status=status.HTTP_200_OK)
+        return Response({"error": "Intersection not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger_main.exception(f"Error retrieving intersection: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while retrieving intersection."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def get_all_intersections(request):
@@ -91,12 +120,23 @@ def get_all_intersections(request):
         return Response(all_intersections_data, status=status.HTTP_200_OK)
 
     except Exception as e:
-        logger_background.exception(f"Error retrieving all intersections: {e}", exc_info=True)
+        logger_main.exception(f"Error retrieving all intersections: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while retrieving intersections."},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 #! POST REQUESTS -------------------------
+@api_view(['POST'])
+def post_reset_intersection_statistics(request, intersection_id):
+    try:
+        AvgWaitingTimeDataPointModel.objects.filter(intersection_id=intersection_id).delete()
+        AvgVehicleThroughputDataPointModel.objects.filter(intersection_id=intersection_id).delete()
+        return Response(status=status.HTTP_202_ACCEPTED)
+    except Exception as e:
+        logger_main.exception(f"Error resetting intersection statistics: {e}", exc_info=True)
+        return Response({"error": "An internal server error occurred while resetting intersection statistics."}
+                        , status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['POST'])
 def post_traffic_light_toggle(request):
     try:
@@ -104,44 +144,50 @@ def post_traffic_light_toggle(request):
         toggle_traffic_lights(current_pi_update["STATE"])
         return Response(status=status.HTTP_202_ACCEPTED)
     except Exception as e:
-        logger_background.exception(f"Error toggling traffic lights: {e}", exc_info=True)
+        logger_main.exception(f"Error toggling traffic lights: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while toggling traffic lights."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_light_all_red(request):
     try:
-        send_pi_request(message_payload={
-            "action": "AllRed",
+        current_pi_update = pi_connection_manager.get_pi_request_data()
+        message_payload = {
+            "action": "Resume" if current_pi_update["STATE"] == 'AllRed' else "AllRed",
             "direction": ""
-        })
+        }
+        send_pi_request(message_payload)
         return Response(status=status.HTTP_202_ACCEPTED)
 
     except Exception as e:
-        logger_background.exception(f"Error setting all lights to red: {e}", exc_info=True)
+        logger_main.exception(f"Error setting all lights to red: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while setting all lights to red."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_light_hazard_mode(request):
     try:
-        send_pi_request(message_payload={
-            "action": "HazardMode",
+        current_pi_update = pi_connection_manager.get_pi_request_data()
+        message_payload = {
+            "action": "Resume" if current_pi_update["STATE"] == 'ALL_YELLOW' else "HazardMode",
             "direction": ""
-        })
+        }
+        send_pi_request(message_payload)
         return Response(status=status.HTTP_202_ACCEPTED)
     except Exception as e:
-        logger_background.exception(f"Error setting hazard mode: {e}", exc_info=True)
+        logger_main.exception(f"Error setting hazard mode: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while setting hazard mode."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def post_traffic_lights_off(request):
     try:
-        send_pi_request(message_payload={
-            "action": "AllOff",
+        current_pi_update = pi_connection_manager.get_pi_request_data()
+        message_payload = {
+            "action": "Resume" if current_pi_update["STATE"] == 'ALL_OFF' else "AllOff",
             "direction": ""
-        })
+        }
+        send_pi_request(message_payload)
         return Response(status=status.HTTP_202_ACCEPTED)
     except Exception as e:
-        logger_background.exception(f"Error turning off traffic lights: {e}", exc_info=True)
+        logger_main.exception(f"Error turning off traffic lights: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while turning off traffic lights."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
@@ -153,7 +199,7 @@ def post_traffic_light_resume(request):
         })
         return Response(status=status.HTTP_202_ACCEPTED)
     except Exception as e:
-        logger_background.exception(f"Error resuming traffic lights: {e}", exc_info=True)
+        logger_main.exception(f"Error resuming traffic lights: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while resuming traffic lights."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
@@ -167,7 +213,7 @@ def post_traffic_light_toggle_smart_algorithm(request, intersection_id):
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger_background.exception(f"Error toggling smart algorithm for intersection {intersection_id}: {e}", exc_info=True)
+        logger_main.exception(f"Error toggling smart algorithm for intersection {intersection_id}: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred while toggling smart algorithm."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
@@ -183,7 +229,7 @@ def create_intersection(request):
         return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         # Log the full error for debugging
-        logger_background.error(f"Error in create_intersection: {e}", exc_info=True)
+        logger_main.error(f"Error in create_intersection: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #! PUT REQUESTS (for updates) -------------------------
@@ -215,7 +261,7 @@ def update_intersection(request, intersection_id):
     except ValueError as ve:
         return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        logger_background.error(f"Error in update_intersection: {e}", exc_info=True)
+        logger_main.error(f"Error in update_intersection: {e}", exc_info=True)
         return Response({"error": "An internal server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #! DELETE REQUESTS ------------------------------------
@@ -253,13 +299,13 @@ async def generate_frames_for_stream():
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + bytearray(frame_bytes_to_send) + b'\r\n')
             if not printed_yielding_message:
-                logger_background.debug(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
+                logger_main.debug(f"Stream: Yielding frame (length: {len(frame_bytes_to_send)})") # DEBUG
                 printed_yielding_message = True
             printed_no_frame_message = False
 
         else:
             if not printed_no_frame_message:
-                logger_background.debug("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG
+                logger_main.debug("Stream: No frame ready in latest_processed_frame_bytes will sleep.") # DEBUG
                 printed_no_frame_message = True
             printed_yielding_message = False
             pass  # Avoid printing too much if no frame is ready immediately

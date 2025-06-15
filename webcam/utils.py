@@ -1,5 +1,6 @@
 """Utilities for logging."""
 import collections
+import datetime
 import os
 import re
 import threading
@@ -16,6 +17,7 @@ from ultralytics import YOLO
 from vidgear.gears import VideoGear
 
 from webcam import constants
+# from webcam.intersection import AvgWaitingTimeDataPoint, AvgVehicleThroughputDataPoint
 
 ALPHA = 0.5
 FONT = cv2.FONT_HERSHEY_PLAIN
@@ -233,14 +235,18 @@ def get_video_stream():
             logging=True,
             time_delay=1
         ).start()
+        # logger_main.info("Capturing video stream from YouTube")
 
     # For Raspberry Pi Video Connection:
     elif "tcp" in constants.VIDEO_SOURCE:
         vid = cv2.VideoCapture(constants.VIDEO_SOURCE)
+        # logger_main.info("Capturing video stream from Raspberry Pi")
+
 
     # For local machine webcam:
     elif constants.VIDEO_SOURCE == 0:
         vid = VideoGear(source=constants.VIDEO_SOURCE).start()
+        # logger_main.info("Capturing video stream from local webcam")
 
     # For locally saved video
     else:
@@ -251,12 +257,16 @@ def get_video_stream():
             logging=True,
             time_delay=1,
         ).start()
+        # logger_main.info("Capturing video stream from local video")
     return vid
 
 
 def get_frame(vid):
     if "tcp" in constants.VIDEO_SOURCE:
-        _, frame = vid.read()
+        got_frame, frame = vid.read()
+        if not got_frame:
+            # logger_main.info("Cannot read frame from video stream. Closing video stream!")
+            vid.release()
     else:
         frame = vid.read()
     return frame
@@ -310,6 +320,59 @@ def save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, a
     if len(analytic_list_waiting_score) == 3000:
         plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
                        'webcam/images/analytics3000frames.png')
+
+def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_loop_time, past_waiting_score, new_vehicles_in_intersection):
+    # avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle / avg_waiting_time/cycle)) / (past_waiting_score - 1)
+    #
+    #                                                avg_waiting_time/cycle = (current_loop_time / toggle_number)
+    #                                                time_since_last_toggle / (current_loop_time / toggle_number) = (time_since_last_toggle * toggle_number) / current_loop_time
+    #
+    # avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle * toggle_number) / current_loop_time) / (past_waiting_score - 1)
+
+    if not hasattr(collect_statistics, 'last_stat_save_time'):
+        # Initialize to a time that ensures the first save happens,
+        # or 0 if you want the first call to potentially save immediately.
+        collect_statistics.last_stat_save_time = time.monotonic() - 5.0
+
+    from webcam.intersection import AvgWaitingTimeDataPoint, AvgVehicleThroughputDataPoint
+
+    # last_avg_waiting_time = AvgWaitingTimeDataPoint.load_from_db(intersection_id=constants.INTERSECTION_ID).sort("timestamp", reverse=True)[0].value
+
+    avg_waiting_data_points = AvgWaitingTimeDataPoint.load_from_db(intersection_id=constants.INTERSECTION_ID)
+    last_avg_waiting_time = 0  # Default value if no data points are found
+
+    if avg_waiting_data_points:
+        # Sort the list of DataPoint objects by their timestamp attribute
+        avg_waiting_data_points.sort(key=lambda dp: dp.timestamp, reverse=True)
+        if avg_waiting_data_points:  # Check again in case the list became empty after potential filtering (though not done here)
+            last_avg_waiting_time = avg_waiting_data_points[0].value
+
+    time_since_last_toggle = current_loop_time - last_toggle_time
+
+    if past_waiting_score == 1:
+        past_waiting_score -= 1
+
+    avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle * toggle_number) / current_loop_time) / (past_waiting_score - 1)
+    if avg_waiting_time < 0:
+        avg_waiting_time = 0
+
+    avg_vehicle_throughput = new_vehicles_in_intersection / current_loop_time
+
+    milliseconds_since_epoch = int(datetime.datetime.now().timestamp() * 1000)
+
+    current_time = time.monotonic()
+
+    if (current_time - collect_statistics.last_stat_save_time) >= 5.0:
+        new_avg_waiting_time_data_point = AvgWaitingTimeDataPoint(intersection_id=constants.INTERSECTION_ID, timestamp=datetime.datetime.now, value=avg_waiting_time)
+        new_avg_waiting_time_data_point.save_to_db()
+
+        new_avg_vehicle_throughput_data_point = AvgVehicleThroughputDataPoint(intersection_id=constants.INTERSECTION_ID, timestamp=datetime.datetime.now, value=avg_vehicle_throughput)
+        new_avg_vehicle_throughput_data_point.save_to_db()
+
+        collect_statistics.last_stat_save_time = current_time
+
+    past_waiting_score = waiting_score
+    return past_waiting_score
 
 def load_models(traffic_control_agent):
     if os.path.exists(constants.detection_model_path):

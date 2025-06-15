@@ -92,8 +92,8 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            # "hosts": [(os.environ["REDIS_HOST"], os.environ["REDIS_PORT"])],
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [(os.environ["REDIS_HOST"], os.environ["REDIS_PORT"])],
+            # "hosts": [('127.0.0.1', 6379)],
         },
     },
 }
@@ -111,6 +111,14 @@ DATABASES = {
         'HOST': os.environ['DB_HOST'],
         'PORT': os.environ['DB_PORT'],
     }
+    # 'default': {
+    #     'ENGINE': 'django.contrib.gis.db.backends.postgis',
+    #     'NAME': "smart-intersection-db",
+    #     'USER': "admin",
+    #     'PASSWORD': "dbpass",
+    #     'HOST': "smart-intersection.go.ro",
+    #     'PORT': 5432,
+    # }
 }
 
 # DATABASE_ROUTERS = ["django_mongodb_backend.routers.MongoRouter"]
