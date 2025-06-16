@@ -63,8 +63,9 @@ def background_processing_loop():
     last_smart_edge_cases_control_time = time.monotonic()  # Initialize with current time
     old_in_intersection_list = []
     current_state = pi_connection_manager.get_pi_request_data()["STATE"]
-    toggle_actions_number = 0
+    toggle_actions_number = 1
     new_vehicles_in_intersection = 0
+    start_loop_time = time.monotonic()
 
     while True:
         current_loop_time = time.monotonic()
@@ -75,11 +76,11 @@ def background_processing_loop():
                 time.sleep(5.0)
                 real_frame_number = 0
                 waiting_score = 0
-                toggle_actions_number = 0
-                current_loop_time = 0
+                toggle_actions_number = 1
                 last_smart_control_time = 0
-                last_smart_edge_cases_control_time = 0
+                last_smart_edge_cases_control_time = current_loop_time
                 vid = get_video_stream()
+                start_loop_time = time.monotonic()
                 continue
             frame = cv2.resize(frame, (1000, 700))
             real_frame_number += 1
@@ -112,7 +113,7 @@ def background_processing_loop():
                         [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4,
                          vehicles_in_intersection],
                         old_in_intersection_list, current_state,
-                        waiting_score, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time,
+                        start_loop_time, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time,
                         waiting_list, toggle_actions_number)
 
                 new_vehicles_in_intersection += tmp_new_vehicles_in_intersection
@@ -131,7 +132,7 @@ def background_processing_loop():
 
             past_waiting_score = collect_statistics(waiting_score, last_smart_edge_cases_control_time,
                                                     toggle_actions_number, current_loop_time, past_waiting_score,
-                                                    new_vehicles_in_intersection)
+                                                    new_vehicles_in_intersection, start_loop_time)
 
             if constants.DISPLAY_ROIS:
                 annotated_frame = draw_rois(annotated_frame, roi1, roi2, roi3, roi4, roi_central)

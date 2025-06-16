@@ -321,7 +321,7 @@ def save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, a
         plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
                        'webcam/images/analytics3000frames.png')
 
-def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_loop_time, past_waiting_score, new_vehicles_in_intersection):
+def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_loop_time, past_waiting_score, new_vehicles_in_intersection, start_loop_time):
     # avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle / avg_waiting_time/cycle)) / (past_waiting_score - 1)
     #
     #                                                avg_waiting_time/cycle = (current_loop_time / toggle_number)
@@ -336,8 +336,6 @@ def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_l
 
     from webcam.intersection import AvgWaitingTimeDataPoint, AvgVehicleThroughputDataPoint
 
-    # last_avg_waiting_time = AvgWaitingTimeDataPoint.load_from_db(intersection_id=constants.INTERSECTION_ID).sort("timestamp", reverse=True)[0].value
-
     avg_waiting_data_points = AvgWaitingTimeDataPoint.load_from_db(intersection_id=constants.INTERSECTION_ID)
     last_avg_waiting_time = 0  # Default value if no data points are found
 
@@ -349,20 +347,20 @@ def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_l
 
     time_since_last_toggle = current_loop_time - last_toggle_time
 
+    division_by_zero_correction = 0.000
     if past_waiting_score == 1:
-        past_waiting_score -= 1
+        division_by_zero_correction -= 100
 
-    avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle * toggle_number) / current_loop_time) / (past_waiting_score - 1)
+    avg_waiting_time = last_avg_waiting_time + ((current_loop_time - start_loop_time)/ toggle_number) * ((past_waiting_score - waiting_score) / (collect_statistics.last_stat_save_time - current_loop_time ))
     if avg_waiting_time < 0:
         avg_waiting_time = 0
 
-    avg_vehicle_throughput = new_vehicles_in_intersection / current_loop_time
-
-    milliseconds_since_epoch = int(datetime.datetime.now().timestamp() * 1000)
+    avg_vehicle_throughput = new_vehicles_in_intersection / (current_loop_time - start_loop_time)
 
     current_time = time.monotonic()
 
     if (current_time - collect_statistics.last_stat_save_time) >= 5.0:
+        past_waiting_score = waiting_score
         new_avg_waiting_time_data_point = AvgWaitingTimeDataPoint(intersection_id=constants.INTERSECTION_ID, timestamp=datetime.datetime.now, value=avg_waiting_time)
         new_avg_waiting_time_data_point.save_to_db()
 
@@ -371,7 +369,7 @@ def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_l
 
         collect_statistics.last_stat_save_time = current_time
 
-    past_waiting_score = waiting_score
+
     return past_waiting_score
 
 def load_models(traffic_control_agent):

@@ -83,12 +83,12 @@ def get_statistics(request, intersection_id):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-def get_current_intersection_status(request):
+def get_current_intersection_status(request, intersection_id):
     current_pi_update = pi_connection_manager.get_pi_request_data()
     return Response(
         {
             "connected": pi_connection_manager.is_connected(),
-            "state": current_pi_update.to_json()
+            "state": current_pi_update["STATE"]
         }, status=status.HTTP_200_OK)
 
 @api_view(['GET'])

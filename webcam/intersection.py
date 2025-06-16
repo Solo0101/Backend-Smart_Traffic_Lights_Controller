@@ -235,6 +235,8 @@ class Intersection:
         )
 
     def to_json(self):
+        self.avg_waiting_time_data_points.sort(key=lambda data_point: data_point.timestamp)
+        self.avg_vehicle_throughput_data_points.sort(key=lambda data_point: data_point.timestamp)
         return {
             "id": self.id,
             "name": self.name,
