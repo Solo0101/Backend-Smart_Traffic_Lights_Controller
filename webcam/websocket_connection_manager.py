@@ -1,5 +1,4 @@
 import threading
-import logging
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -79,6 +78,5 @@ class PiConnectionStatusManager:
         self._pi_request_data = {
             "STATE": "NORTH_SOUTH_GREEN", "NSG": 42, "NSY": 3, "EWG": 42, "EWY": 3
         }
-
 
 pi_connection_manager = PiConnectionStatusManager()

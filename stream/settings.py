@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+
 from webcam.utils import ThreadNameFilter
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -41,7 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'rest_framework',
+    'rest_framework_simplejwt',
     'channels',
     'webcam.apps.WebcamConfig'
 
@@ -76,6 +79,12 @@ TEMPLATES = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
 WSGI_APPLICATION = 'stream.wsgi.application'
 ASGI_APPLICATION = 'stream.asgi.application'
 
@@ -83,9 +92,8 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            # "hosts": [("127.0.0.1", 6379)],
-            "hosts": [("127.0.0.1", 6380)],
-            # "hosts": [("redis", 6380)],
+            "hosts": [(os.environ["REDIS_HOST"], os.environ["REDIS_PORT"])],
+            # "hosts": [('127.0.0.1', 6379)],
         },
     },
 }
@@ -94,30 +102,26 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-# DATABASES = {
-#     # 'default': {
-#     #     'ENGINE': 'django.db.backends.sqlite3',
-#     #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-#     # }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ['POSTGRES_DB'],
+        'USER': os.environ['POSTGRES_USER'],
+        'PASSWORD': os.environ['POSTGRES_PASSWORD'],
+        'HOST': os.environ['DB_HOST'],
+        'PORT': os.environ['DB_PORT'],
+    }
+    # 'default': {
+    #     'ENGINE': 'django.contrib.gis.db.backends.postgis',
+    #     'NAME': "smart-intersection-db",
+    #     'USER': "admin",
+    #     'PASSWORD': "dbpass",
+    #     'HOST': "smart-intersection.go.ro",
+    #     'PORT': 5432,
+    # }
+}
 
-#     'default': {
-#         # MySQL database engine class.
-#         'ENGINE': 'django.db.backends.mysql',
-#         # MySQL database host ip.
-#         'HOST': '127.0.0.1',
-#         # port number.
-#         'PORT': '3306',
-#         # database name.
-#         'NAME': 'ocst',
-#         # user name.
-#         'USER': 'root',
-#         # password
-#         'PASSWORD': 'password',
-#         # connect options
-#         'OPTIONS': {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",},
-#     }
-# }
-
+# DATABASE_ROUTERS = ["django_mongodb_backend.routers.MongoRouter"]
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

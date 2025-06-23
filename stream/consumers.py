@@ -3,9 +3,10 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from webcam import utils
-from webcam.constants import PI_COMMUNICATION_GROUP
+from webcam.constants import PI_COMMUNICATION_GROUP, MOBILE_APP_COMMUNICATION_GROUP
 from webcam.websocket_connection_manager import pi_connection_manager
 
+# --- CONSUMER 1: For communication with the Raspberry Pi ---
 class PiConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
@@ -42,6 +43,8 @@ class PiConsumer(AsyncWebsocketConsumer):
                 else:
                     utils.logger_main.warning(f"Received WebSocket message payload is not a dict: {text_data_json}")
 
+                #TODO: Parse json response from Raspberry Pi and load it into the api_manager
+
                 await self.send(text_data=json.dumps({
                     "info": "DEBUG",
                     "message": f"Server received: {text_data_json}"  # Echo back the payload
@@ -65,5 +68,38 @@ class PiConsumer(AsyncWebsocketConsumer):
         """
         message_data = event['data']
         await self.send(text_data=json.dumps(message_data))
+
+# --- CONSUMER 2: For broadcasting intersection status to Flutter clients ---
+class MobileAppConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # A different group name specifically for status updates
+
+        # Each connected Flutter app joins this group
+        await self.channel_layer.group_add(
+            MOBILE_APP_COMMUNICATION_GROUP,
+            self.channel_name
+        )
+        await self.accept()
+        print(f"WebSocket: Flutter client connected: {self.channel_name}")
+
+    async def disconnect(self, close_code):
+        # Each Flutter app leaves the group when it disconnects
+        await self.channel_layer.group_discard(
+            MOBILE_APP_COMMUNICATION_GROUP,
+            self.channel_name
+        )
+        print(f"WebSocket: Flutter client disconnected: {self.channel_name}")
+
+    # This method is called when a status update is broadcast to the group
+    async def intersection_status_update(self, event):
+        # The event dictionary contains the data we want to send
+        message_data = {
+            'id': event['id'],
+            'status': event['status'],
+        }
+        # Send the status update to the connected Flutter client
+        await self.send(text_data=json.dumps(message_data))
+
+
 
 piConsumer = PiConsumer()

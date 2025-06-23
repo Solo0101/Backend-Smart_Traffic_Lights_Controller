@@ -24,6 +24,9 @@ services:
       - ../redis_data:/data
     command:
       - "--port 6380"
+    depends_on:
+      nginx:
+        condition: service_started
 
   django-yolo-streaming:
       build:
@@ -34,11 +37,17 @@ services:
       restart: unless-stopped
       ports:
         - "8000:8000"
+      command:
+        - /bin/sh
+        - '-c'
+        - '/app/run.sh'
       depends_on:
         redis:
           condition: service_started
-        mongodb:
-          condition: service_started
+        postgresql:
+          condition: service_healthy
+          restart: true
+      env_file: "./.env"
       deploy:
         resources:
             reservations:
@@ -46,12 +55,30 @@ services:
                   - driver: nvidia
                     device_ids: [ all ]
                     capabilities: [ gpu, compute, utility ]
-
-  mongodb:
-      image: mongo:6-jammy
-      container_name: 'mongodb'
-      restart: unless-stopped
-      ports:
-          - '27017:27017'
       volumes:
-          - ../mongodb/dbdata6:/data/db
+        - ./:/app
+        - ./static:/app/staticfiles
+
+  postgresql:
+      image: postgis/postgis:17-3.5-alpine
+      container_name: 'postgresql'
+      restart: always
+      ports:
+          - '5432:5432'
+      volumes:
+          - ../postgres_data:/var/lib/postgresql/data
+      env_file: "./.env"
+      environment:
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        - POSTGRES_DB=${POSTGRES_DB}
+        - POSTGRES_USER=${POSTGRES_USER}
+      healthcheck:
+        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+        interval: 10s
+        timeout: 10s
+        retries: 5
+        start_period: 30s
+
+
+volumes:
+  postgresql:
