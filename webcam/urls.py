@@ -16,7 +16,7 @@ urlpatterns = [
     path('video_feed/', views.video_feed, name="video-feed-1"),
 #? --- REST API URLS ---
     path('traffic_light/get/get_statistics/<str:intersection_id>', views.get_statistics, name="get_statistics"),
-        path('traffic_light/post/post_reset_intersection_statistics/<str:intersection_id>', views.post_reset_intersection_statistics, name="post_reset_intersection_statistics"),
+    path('traffic_light/post/post_reset_intersection_statistics/<str:intersection_id>', views.post_reset_intersection_statistics, name="post_reset_intersection_statistics"),
     path('traffic_light/get/get_current_intersection_status/<str:intersection_id>', views.get_current_intersection_status, name="get_current_intersection_status"),
     path('traffic_light/post/post_traffic_light_toggle', views.post_traffic_light_toggle, name="post_traffic_light_toggle"),
     path('traffic_light/post/post_traffic_light_all_red', views.post_traffic_light_all_red, name="post_traffic_light_all_red"),
