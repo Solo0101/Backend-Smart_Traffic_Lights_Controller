@@ -2,6 +2,7 @@ webcam/models/yolo
 deep_sort
 stream/__pycache__
 webcam/__pycache__
+webcam/images/*
 
 ### Django ###
 *.log
