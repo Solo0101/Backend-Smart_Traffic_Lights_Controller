@@ -1,12 +1,10 @@
 import os
 import threading
 import time
-from decimal import Decimal
 
 from django.apps import AppConfig
 
 import cv2
-from geojson import Point
 
 from webcam import constants
 from webcam.dqn_per import DQNPERAgent
@@ -51,7 +49,6 @@ def background_processing_loop():
     roi4 = constants.ROI4
     roi_central = constants.ROI_CENTRAL
 
-    frame_number = 0
     real_frame_number = 0
     waiting_score = 0
     past_waiting_score = 0
@@ -68,7 +65,7 @@ def background_processing_loop():
     start_loop_time = time.monotonic()
 
     while True:
-        current_loop_time = time.monotonic()
+
         try:
             # Acquiring the frame from the video stream and resizing it
             frame = get_frame(vid)
@@ -78,7 +75,7 @@ def background_processing_loop():
                 waiting_score = 0
                 toggle_actions_number = 1
                 last_smart_control_time = 0
-                last_smart_edge_cases_control_time = current_loop_time
+                last_smart_edge_cases_control_time = time.monotonic()
                 vid = get_video_stream()
                 start_loop_time = time.monotonic()
                 continue
@@ -87,12 +84,10 @@ def background_processing_loop():
             logger_background.debug('Frame: %s', str(real_frame_number))
 
             # Get the result from the image object tracking
-
             results = detection_model.track(frame, persist=True, classes=custom_class_ids, conf=0.1, iou=0.1,
                                             tracker="webcam/models/yolo/bytetrack.yaml")
 
-            # The Process got results
-
+            # Process the results
             (vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection,
              track_ids_list) = roi_tracking(
                 results,
@@ -107,14 +102,18 @@ def background_processing_loop():
             from webcam.models import IntersectionModel
             if IntersectionModel.objects.get(id=constants.INTERSECTION_ID).smart_algorithm_enabled:
                 (last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list,
-                 current_state, waiting_score, waiting_list, toggle_actions_number, tmp_new_vehicles_in_intersection) = \
+                 current_state, waiting_score, waiting_list, toggle_actions_number,
+                 tmp_new_vehicles_in_intersection) = \
                     smart_control_traffic_lights(
-                        traffic_control_agent,
-                        [vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4,
-                         vehicles_in_intersection],
-                        old_in_intersection_list, current_state,
-                        start_loop_time, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time,
-                        waiting_list, toggle_actions_number)
+                        traffic_control_agent=traffic_control_agent,
+                        roi_list=[vehicles_in_roi1, vehicles_in_roi2, vehicles_in_roi3, vehicles_in_roi4, vehicles_in_intersection],
+                        old_in_intersection_list=old_in_intersection_list,
+                        current_state=current_state,
+                        start_loop_time=start_loop_time,
+                        last_smart_edge_cases_control_time=last_smart_edge_cases_control_time,
+                        last_smart_control_time=last_smart_control_time,
+                        waiting_list=waiting_list,
+                        toggle_actions_number=toggle_actions_number)
 
                 new_vehicles_in_intersection += tmp_new_vehicles_in_intersection
 
@@ -131,7 +130,7 @@ def background_processing_loop():
             #                         analytic_list_throughput_score)
 
             past_waiting_score = collect_statistics(waiting_score, last_smart_edge_cases_control_time,
-                                                    toggle_actions_number, current_loop_time, past_waiting_score,
+                                                    toggle_actions_number, past_waiting_score,
                                                     new_vehicles_in_intersection, start_loop_time)
 
             if constants.DISPLAY_ROIS:

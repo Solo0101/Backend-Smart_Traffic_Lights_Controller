@@ -108,8 +108,9 @@ def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_
 
     return last_smart_edge_cases_control_time
 
-def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, start_loop_time, current_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list, toggle_actions_number):
+def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, start_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list, toggle_actions_number):
     current_pi_update = pi_connection_manager.get_pi_request_data()
+    current_loop_time = time.monotonic()
     waiting_score, waiting_list = get_waiting(roi_list, current_pi_update["STATE"], waiting_list)
     if (current_loop_time - last_smart_control_time) >= constants.SMART_CONTROL_INTERVAL and current_pi_update["STATE"] not in ["ALL_OFF", "ALL_YELLOW", "ALL_RED"]: # Execute every 1 second
         print(current_pi_update["STATE"])

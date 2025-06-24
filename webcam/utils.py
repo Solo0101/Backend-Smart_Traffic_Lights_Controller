@@ -321,14 +321,14 @@ def save_plot_analytics(traffic_volume_score, waiting_score, throughput_score, a
         plot_analytics(analytic_list_waiting_score, analytic_list_throughput_score,
                        'webcam/images/analytics3000frames.png')
 
-def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_loop_time, past_waiting_score, new_vehicles_in_intersection, start_loop_time):
+def collect_statistics(waiting_score, last_toggle_time, toggle_number, past_waiting_score, new_vehicles_in_intersection, start_loop_time):
     # avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle / avg_waiting_time/cycle)) / (past_waiting_score - 1)
     #
     #                                                avg_waiting_time/cycle = (current_loop_time / toggle_number)
     #                                                time_since_last_toggle / (current_loop_time / toggle_number) = (time_since_last_toggle * toggle_number) / current_loop_time
     #
     # avg_waiting_time = last_avg_waiting_time + (waiting_score - past_waiting_score + (time_since_last_toggle * toggle_number) / current_loop_time) / (past_waiting_score - 1)
-
+    current_loop_time = time.monotonic()
     if not hasattr(collect_statistics, 'last_stat_save_time'):
         # Initialize to a time that ensures the first save happens,
         # or 0 if you want the first call to potentially save immediately.
