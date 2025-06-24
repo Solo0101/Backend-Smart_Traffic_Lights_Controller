@@ -30,6 +30,8 @@ def get_action_direction(current_pi_update):
             pass
     return action_direction
 
+
+# noinspection t
 def get_waiting(roi_list, current_state, waiting_list):
     waiting_score=0
     if current_state == "ALL_YELLOW" or current_state == "ALL_OFF":
