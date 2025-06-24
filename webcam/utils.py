@@ -351,7 +351,12 @@ def collect_statistics(waiting_score, last_toggle_time, toggle_number, current_l
     if past_waiting_score == 1:
         division_by_zero_correction -= 100
 
-    avg_waiting_time = last_avg_waiting_time + ((current_loop_time - start_loop_time)/ toggle_number) * ((past_waiting_score - waiting_score) / (collect_statistics.last_stat_save_time - current_loop_time ))
+    if waiting_score > 0:
+        waiting_score = 1
+
+    saved_statistics_number = (current_loop_time - start_loop_time) / 5 + 1
+
+    avg_waiting_time = (last_avg_waiting_time * saved_statistics_number + waiting_score * ((current_loop_time - start_loop_time) / toggle_number)) / (saved_statistics_number + 1)
     if avg_waiting_time < 0:
         avg_waiting_time = 0
 
