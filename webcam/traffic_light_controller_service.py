@@ -8,12 +8,14 @@ from webcam.constants import CURRENT_STATE_DICT
 from webcam.utils import logger_background
 from webcam.websocket_connection_manager import send_pi_request, pi_connection_manager
 
+
 def get_delta_new_cars_in_intersection_list(old_in_intersection_list, current_in_intersection_list):
     new_cars_in_intersection_list = []
     for vehicle in current_in_intersection_list:
         if vehicle[1] not in old_in_intersection_list:
             new_cars_in_intersection_list.append(vehicle)
     return new_cars_in_intersection_list
+
 
 def get_action_direction(current_pi_update):
     action_direction = ""
@@ -33,12 +35,12 @@ def get_action_direction(current_pi_update):
 
 # noinspection t
 def get_waiting(roi_list, current_state, waiting_list):
-    waiting_score=0
+    waiting_score = 0
     if current_state == "ALL_YELLOW" or current_state == "ALL_OFF":
         for i in range(0, len(waiting_list), 1):
             waiting_list[i] = 0
     elif current_state == "NORTH_SOUTH_GREEN" or current_state == "NORTH_SOUTH_YELLOW":
-        for i in range(0, len(roi_list)-1, 2):
+        for i in range(0, len(roi_list) - 1, 2):
             waiting_list[i * 2] = -(len(roi_list[i]) // -2)
             waiting_list[i * 2 + 1] = len(roi_list[i]) / 2
             waiting_list[i * 2 + 2] = 0
@@ -46,7 +48,7 @@ def get_waiting(roi_list, current_state, waiting_list):
             for vehicle in roi_list[i]:
                 waiting_score += constants.WAITING_SCORE_PENALTY[vehicle[0]]
     elif current_state == "EAST_WEST_GREEN" or current_state == "EAST_WEST_YELLOW":
-        for i in range(1, len(roi_list)-1, 2):
+        for i in range(1, len(roi_list) - 1, 2):
             waiting_list[(i - 1) * 2] = 0
             waiting_list[(i - 1) * 2 + 1] = 0
             waiting_list[(i - 1) * 2 + 2] = -(len(roi_list[i]) // -2)
@@ -59,21 +61,23 @@ def get_waiting(roi_list, current_state, waiting_list):
 def get_throughput_score(vehicles_in_intersection, frame_number):
     return (float(len(vehicles_in_intersection)) * constants.FRAME_RATE) / float(frame_number)
 
+
 def toggle_traffic_lights(current_state):
     if current_state == "NORTH_SOUTH_GREEN":
-        direction="NS"
+        direction = "NS"
     elif current_state == "EAST_WEST_GREEN":
-        direction="EW"
-    else: return
+        direction = "EW"
+    else:
+        return
 
     send_pi_request(message_payload={
         "action": "Jump",
         "direction": f"{direction}Y"
     })
 
-def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_edge_cases_control_time):
 
-    if (current_loop_time - last_smart_edge_cases_control_time) <= constants.EDGE_CASES_OPTIMIZATIONS_COOLDOWN: # Execute every 15 seconds
+def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_edge_cases_control_time):
+    if (current_loop_time - last_smart_edge_cases_control_time) <= constants.EDGE_CASES_OPTIMIZATIONS_COOLDOWN:  # Execute every 15 seconds
         return last_smart_edge_cases_control_time
 
     current_pi_update = pi_connection_manager.get_pi_request_data()
@@ -86,7 +90,8 @@ def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_
     entry_number = 0
     for roi in roi_list:
         from webcam.models import IntersectionEntryModel
-        IntersectionEntryModel.objects.filter(intersection_id=constants.INTERSECTION_ID, entry_number=entry_number).update(traffic_score=len(roi))
+        IntersectionEntryModel.objects.filter(intersection_id=constants.INTERSECTION_ID,
+                                              entry_number=entry_number).update(traffic_score=len(roi))
 
         if len(roi) == 0:
             empty_rois += 1
@@ -97,7 +102,7 @@ def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_
 
     potential_traffic_throughput_score = 0
 
-    for i in range(int(current_pi_update["STATE"] == "NORTH_SOUTH_GREEN"), len(roi_list)-1, 2):
+    for i in range(int(current_pi_update["STATE"] == "NORTH_SOUTH_GREEN"), len(roi_list) - 1, 2):
         for vehicle in roi_list[i]:
             potential_traffic_throughput_score += constants.WAITING_SCORE_PENALTY[vehicle[0]]
 
@@ -108,15 +113,18 @@ def edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_
 
     return last_smart_edge_cases_control_time
 
-def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state, start_loop_time, last_smart_edge_cases_control_time, last_smart_control_time, waiting_list, toggle_actions_number):
+
+def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_intersection_list, current_state,
+                                 start_loop_time, last_smart_edge_cases_control_time, last_smart_control_time,
+                                 waiting_list, toggle_actions_number):
+
     current_pi_update = pi_connection_manager.get_pi_request_data()
     current_loop_time = time.monotonic()
     waiting_score, waiting_list = get_waiting(roi_list, current_pi_update["STATE"], waiting_list)
-    if (current_loop_time - last_smart_control_time) >= constants.SMART_CONTROL_INTERVAL and current_pi_update["STATE"] not in ["ALL_OFF", "ALL_YELLOW", "ALL_RED"]: # Execute every 1 second
-        print(current_pi_update["STATE"])
-
-        last_smart_edge_cases_control_time = edge_cases_optimizations_controller(roi_list, current_loop_time, last_smart_edge_cases_control_time) # If action taken has a cooldown of 15 seconds
-
+    if (current_loop_time - last_smart_control_time) >= constants.SMART_CONTROL_INTERVAL and current_pi_update[
+        "STATE"] not in ["ALL_OFF", "HAZARD_MODE", "ALL_RED"]:  # Execute every 1 second
+        last_smart_edge_cases_control_time = edge_cases_optimizations_controller(roi_list, current_loop_time,
+                                                                                 last_smart_edge_cases_control_time)  # If action taken has a cooldown of 15 seconds
 
         state_array = np.array(
             [-(len(roi_list[0]) // -2), len(roi_list[0]) / 2,
@@ -160,13 +168,13 @@ def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_interse
                         "direction": ""
                     })
                 case 1:
-                    if current_pi_update[f"{action_direction}G"] < 60: # (max 60s)
+                    if current_pi_update[f"{action_direction}G"] < 60:  # (max 60s)
                         send_pi_request(message_payload={
                             "action": "Increase",
                             "direction": f"{action_direction}"
                         })
                 case 2:
-                    if current_pi_update[f"{action_direction}G"] > 10: # (min 10s)
+                    if current_pi_update[f"{action_direction}G"] > 10:  # (min 10s)
                         send_pi_request(message_payload={
                             "action": "Decrease",
                             "direction": f"{action_direction}"
@@ -176,7 +184,9 @@ def smart_control_traffic_lights(traffic_control_agent, roi_list, old_in_interse
         last_smart_control_time = current_loop_time
         current_state = current_pi_update["STATE"]
 
-    return last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list, toggle_actions_number, len(get_delta_new_cars_in_intersection_list(old_in_intersection_list, roi_list[4]))
+    return last_smart_edge_cases_control_time, last_smart_control_time, old_in_intersection_list, current_state, waiting_score, waiting_list, toggle_actions_number, len(
+        get_delta_new_cars_in_intersection_list(old_in_intersection_list, roi_list[4]))
+
 
 def debugging_print_vehicles_in_rois(roi_list):
     if constants.ENABLE_VEHICLES_IN_ROIS_LOGGING:
@@ -187,15 +197,16 @@ def debugging_print_vehicles_in_rois(roi_list):
                         "\n" + str(len(roi_list[4])) + " " + str(roi_list[4]) + "\n")
         logger_background.debug(debug_string)
 
+
 def draw_debugging_dot_to_calculated_tracked_car(roi_list, annotated_frame):
     for i in range(len(roi_list)):
         for track in roi_list[i]:
             if i < 4 and i % 2 == int(pi_connection_manager.get_pi_request_data()["STATE"] == "EAST_WEST_GREEN"):
                 cv2.circle(annotated_frame, (int(track[2][0]), int(track[2][1])), radius=5, color=(0, 0, 255),
-                        thickness=-1)
+                           thickness=-1)
             elif i < 4 and i % 2 == int(pi_connection_manager.get_pi_request_data()["STATE"] == "NORTH_SOUTH_GREEN"):
                 cv2.circle(annotated_frame, (int(track[2][0]), int(track[2][1])), radius=5, color=(0, 255, 0),
                            thickness=-1)
             if i == 4:
                 cv2.circle(annotated_frame, (int(track[2][0]), int(track[2][1])), radius=5, color=(255, 0, 0),
-                        thickness=-1)
+                           thickness=-1)
