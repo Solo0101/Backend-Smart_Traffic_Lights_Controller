@@ -100,12 +100,6 @@ The application exposes several API endpoints for managing intersections and tra
 └── run.sh <br>
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a pull request or open an issue to improve the project.
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License.
