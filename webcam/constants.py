@@ -56,7 +56,8 @@ CURRENT_STATE_DICT = {
     "EAST_WEST_GREEN": 2,
     "EAST_WEST_YELLOW": 3,
     "ALL_OFF:": 4,
-    "ALL_YELLOW": 5
+    "HAZARD_MODE": 5,
+    "ALL_RED": 6
 }
 
 FRAME_RATE = 15

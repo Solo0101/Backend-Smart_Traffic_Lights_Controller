@@ -62,7 +62,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile')
 
     def update(self, instance, validated_data):
-        #TODO: Investigate here why profile data gets ignored
         profile_data = validated_data.pop('profile', {})
         print(profile_data)
 

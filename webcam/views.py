@@ -152,7 +152,7 @@ def post_traffic_light_all_red(request):
     try:
         current_pi_update = pi_connection_manager.get_pi_request_data()
         message_payload = {
-            "action": "Resume" if current_pi_update["STATE"] == 'AllRed' else "AllRed",
+            "action": "Resume" if current_pi_update["STATE"] == 'ALL_RED' else "AllRed",
             "direction": ""
         }
         send_pi_request(message_payload)
@@ -167,7 +167,7 @@ def post_traffic_light_hazard_mode(request):
     try:
         current_pi_update = pi_connection_manager.get_pi_request_data()
         message_payload = {
-            "action": "Resume" if current_pi_update["STATE"] == 'ALL_YELLOW' else "HazardMode",
+            "action": "Resume" if current_pi_update["STATE"] == 'HAZARD_MODE' else "HazardMode",
             "direction": ""
         }
         send_pi_request(message_payload)
