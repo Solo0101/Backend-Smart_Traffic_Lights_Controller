@@ -1,6 +1,6 @@
-# 🚦 Backend—Smart Traffic Lights Controller
+# 🚦 Smart Traffic Lights Controller Backend
 
-This repository contains the backend for the **Smart Traffic Lights Controller** application, a system designed to optimize traffic flow in real-time using computer vision and reinforcement learning.
+This repository contains the backend for the **Smart Traffic Lights Controller** application, a system designed to optimize traffic flow in real-time using computer vision and reinforcement learning. This backend is designed to work in conjunction with the [RaspberryPi-Smart_Traffic_Lights_Controller](https://github.com/Solo0101/RaspberryPi-Smart_Traffic_Lights_Controller) project, which handles the physical traffic light control.
 
 ---
 
@@ -82,7 +82,28 @@ The application exposes several API endpoints for managing intersections and tra
 
 ## 📂 Project Structure
 
-.├── stream/             # Django project configuration├── webcam/             # Main Django application│   ├── migrations/│   ├── models/         # YOLO model files│   ├── templates/      # HTML templates│   ├── dqn_per.py      # Deep Q-Network implementation│   ├── models.py       # Django models│   ├── serializers.py  # API serializers│   ├── urls.py         # Application-specific URLs│   └── views.py        # API views├── docker-compose.yml├── manage.py├── README.md├── requirements.txt└── run.sh
+.
+├── stream/             # Django project configuration
+├── webcam/             # Main Django application
+│   ├── migrations/
+│   ├── models/         # YOLO model files
+│   ├── templates/      # HTML templates
+│   ├── dqn_per.py      # Deep Q-Network implementation
+│   ├── models.py       # Django models
+│   ├── serializers.py  # API serializers
+│   ├── urls.py         # Application-specific URLs
+│   └── views.py        # API views
+├── docker-compose.yml
+├── manage.py
+├── README.md
+├── requirements.txt
+└── run.sh
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue to improve the project.
+
 ---
 
 ## 📄 License
