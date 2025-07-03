@@ -82,22 +82,22 @@ The application exposes several API endpoints for managing intersections and tra
 
 ## 📂 Project Structure
 
-.
-├── stream/             # Django project configuration
-├── webcam/             # Main Django application
-│   ├── migrations/
-│   ├── models/         # YOLO model files
-│   ├── templates/      # HTML templates
-│   ├── dqn_per.py      # Deep Q-Network implementation
-│   ├── models.py       # Django models
-│   ├── serializers.py  # API serializers
-│   ├── urls.py         # Application-specific URLs
-│   └── views.py        # API views
-├── docker-compose.yml
-├── manage.py
-├── README.md
-├── requirements.txt
-└── run.sh
+. <br>
+├── stream/             # Django project configuration <br>
+├── webcam/             # Main Django application <br>
+│   ├── migrations/ <br>
+│   ├── models/         # YOLO model files <br>
+│   ├── templates/      # HTML templates <br>
+│   ├── dqn_per.py      # Deep Q-Network implementation <br>
+│   ├── models.py       # Django models <br>
+│   ├── serializers.py  # API serializers <br>
+│   ├── urls.py         # Application-specific URLs <br>
+│   └── views.py        # API views <br>
+├── docker-compose.yml <br>
+├── manage.py <br>
+├── README.md <br>
+├── requirements.txt <br>
+└── run.sh <br>
 ---
 
 ## 🤝 Contributing
